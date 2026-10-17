@@ -1,0 +1,51 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="v2x_stop_light">
+    <static>true</static>
+    <pose>0 0 0 0 0 0</pose>
+
+    <link name="link">
+      <!-- 立柱 -->
+      <visual name="pole">
+        <pose>0 0 1.2 0 0 0</pose>
+        <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+        <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+      <collision name="pole_c">
+        <pose>0 0 1.2 0 0 0</pose>
+        <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+      </collision>
+
+      <!-- 灯箱外壳 -->
+      <visual name="housing">
+        <pose>0 0 2.5 0 0 0</pose>
+        <geometry><box><size>0.18 0.30 0.90</size></box></geometry>
+        <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+
+      <!-- 红/黄/绿 灯球：ambient 保证熄灭时仍显本色；点亮由 v2x_traffic_light 插件
+           设置 emissive（自发光）实现，随 ROS 灯态话题实时切换。 -->
+      <visual name="red">
+        <pose>0.10 0 2.78 0 0 0</pose>
+        <geometry><sphere><radius>0.09</radius></sphere></geometry>
+        <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+      </visual>
+      <visual name="yellow">
+        <pose>0.10 0 2.50 0 0 0</pose>
+        <geometry><sphere><radius>0.09</radius></sphere></geometry>
+        <material><ambient>0.45 0.36 0 1</ambient><diffuse>0.5 0.4 0 1</diffuse></material>
+      </visual>
+      <visual name="green">
+        <pose>0.10 0 2.22 0 0 0</pose>
+        <geometry><sphere><radius>0.09</radius></sphere></geometry>
+        <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- ROS 灯态话题驱动灯球 emissive 点亮（默认话题；场景中每灯 inline 覆盖 state_topic 实现分组联动） -->
+    <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+      <state_topic>traffic_light/state</state_topic>
+      <link_name>link</link_name>
+    </plugin>
+  </model>
+</sdf>

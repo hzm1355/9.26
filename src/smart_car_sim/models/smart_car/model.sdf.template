@@ -1,0 +1,257 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="{CAR_NAME}">
+    <pose>0 0 0.15 0 0 0</pose>
+
+    <!-- ==================== 底盘 ==================== -->
+    <link name="chassis">
+      <inertial>
+        <mass>{MASS}</mass>
+        <pose>0 0 0 0 0 0</pose>
+        <inertia>
+          <ixx>{IXX}</ixx><ixy>0</ixy><iyy>{IYY}</iyy>
+          <ixz>0</ixz><iyz>0</iyz><izz>{IZZ}</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="chassis_collision">
+        <pose>0 0 {CHASSIS_Z} 0 0 0</pose>
+        <geometry><box><size>{LENGTH} {WIDTH} {HEIGHT}</size></box></geometry>
+      </collision>
+
+      <visual name="chassis_body">
+        <pose>0 0 {CHASSIS_Z} 0 0 0</pose>
+        <geometry><box><size>{LENGTH} {WIDTH} {HEIGHT}</size></box></geometry>
+        <material>
+          <ambient>{COLOR} 1</ambient>
+          <diffuse>{COLOR} 1</diffuse>
+        </material>
+      </visual>
+
+      <visual name="cabin">
+        <pose>0 {CABIN_OFFSET_Y} {CABIN_Z} 0 0 0</pose>
+        <geometry><box><size>{CABIN_L} {CABIN_W} {CABIN_H}</size></box></geometry>
+        <material>
+          <ambient>0.1 0.1 0.12 1</ambient>
+          <diffuse>0.15 0.15 0.18 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- ====== 激光雷达 (LiDAR) ====== -->
+      <sensor name="lidar" type="ray">
+        <pose>{LIDAR_X} {LIDAR_Y} {LIDAR_Z} 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>{LIDAR_RATE}</update_rate>
+        <visualize>true</visualize>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>{LIDAR_SAMPLES}</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>{LIDAR_MIN_RANGE}</min>
+            <max>{LIDAR_MAX_RANGE}</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>{LIDAR_NOISE}</stddev>
+          </noise>
+        </ray>
+        <plugin name="gazebo_ros_ray_sensor" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/{CAR_NAME}</namespace>
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>{CAR_NAME}/lidar_link</frame_name>
+        </plugin>
+      </sensor>
+
+      <!-- ====== IMU ====== -->
+      <sensor name="imu_sensor" type="imu">
+        <pose>{IMU_X} {IMU_Y} {IMU_Z} 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>{IMU_RATE}</update_rate>
+        <plugin name="gazebo_ros_imu_sensor" filename="libgazebo_ros_imu_sensor.so">
+          <ros>
+            <namespace>/{CAR_NAME}</namespace>
+            <remapping>~/out:=imu/data</remapping>
+          </ros>
+          <frame_name>{CAR_NAME}/imu_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+
+      <!-- ====== 前视相机 ====== -->
+      <sensor name="camera" type="camera">
+        <pose>{CAM_X} {CAM_Y} {CAM_Z} 0 0.3 0</pose>
+        <always_on>true</always_on>
+        <update_rate>{CAM_RATE}</update_rate>
+        <visualize>true</visualize>
+        <camera name="front_camera">
+          <horizontal_fov>{CAM_FOV}</horizontal_fov>
+          <image>
+            <width>{CAM_WIDTH}</width>
+            <height>{CAM_HEIGHT}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>{CAM_FAR}</far>
+          </clip>
+        </camera>
+        <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/{CAR_NAME}</namespace>
+            <remapping>~/image_raw:=camera/image_raw</remapping>
+            <remapping>~/camera_info:=camera/camera_info</remapping>
+          </ros>
+          <camera_name>camera</camera_name>
+          <frame_name>{CAR_NAME}/camera_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- ==================== 左轮 ==================== -->
+    <link name="left_wheel_link">
+      <pose>{WHEEL_Y_FRONT} {WHEEL_LATERAL} {WHEEL_RADIUS} 0 0 0</pose>
+      <inertial>
+        <mass>{WHEEL_MASS}</mass>
+        <inertia>
+          <ixx>{WHEEL_IXX}</ixx><iyy>{WHEEL_IYY}</iyy><izz>{WHEEL_IXX}</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <pose>0 0 0 1.5707963 0 0</pose>
+        <geometry>
+          <cylinder><radius>{WHEEL_RADIUS}</radius><length>{WHEEL_WIDTH}</length></cylinder>
+        </geometry>
+        <surface>
+          <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0 1.5707963 0 0</pose>
+        <geometry>
+          <cylinder><radius>{WHEEL_RADIUS}</radius><length>{WHEEL_WIDTH}</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>left_wheel_link</child>
+      <axis><xyz>0 1 0</xyz>
+        <dynamics><friction>0.1</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ==================== 右轮 ==================== -->
+    <link name="right_wheel_link">
+      <pose>{WHEEL_Y_FRONT} -{WHEEL_LATERAL} {WHEEL_RADIUS} 0 0 0</pose>
+      <inertial>
+        <mass>{WHEEL_MASS}</mass>
+        <inertia>
+          <ixx>{WHEEL_IXX}</ixx><iyy>{WHEEL_IYY}</iyy><izz>{WHEEL_IXX}</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <pose>0 0 0 1.5707963 0 0</pose>
+        <geometry>
+          <cylinder><radius>{WHEEL_RADIUS}</radius><length>{WHEEL_WIDTH}</length></cylinder>
+        </geometry>
+        <surface>
+          <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0 1.5707963 0 0</pose>
+        <geometry>
+          <cylinder><radius>{WHEEL_RADIUS}</radius><length>{WHEEL_WIDTH}</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>right_wheel_link</child>
+      <axis><xyz>0 1 0</xyz>
+        <dynamics><friction>0.1</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ==================== 后脚轮（万向支撑） ==================== -->
+    <link name="caster_link">
+      <pose>{CASTER_Y} 0 {CASTER_RADIUS} 0 0 0</pose>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry><sphere><radius>{CASTER_RADIUS}</radius></sphere></geometry>
+        <surface>
+          <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+          <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry><sphere><radius>{CASTER_RADIUS}</radius></sphere></geometry>
+        <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+      </visual>
+    </link>
+    <joint name="caster_joint" type="fixed">
+      <parent>chassis</parent>
+      <child>caster_link</child>
+    </joint>
+
+    <!-- ==================== 差速驱动插件 (Nav2 兼容) ==================== -->
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/{CAR_NAME}</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <remapping>odom:=odom</remapping>
+      </ros>
+      <update_rate>{DIFF_RATE}</update_rate>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>{WHEEL_SEPARATION}</wheel_separation>
+      <wheel_diameter>{WHEEL_DIAMETER}</wheel_diameter>
+
+      <!-- 运动学限制 -->
+      <max_wheel_torque>{MAX_TORQUE}</max_wheel_torque>
+      <max_wheel_acceleration>{MAX_WHEEL_ACCEL}</max_wheel_acceleration>
+
+      <!-- 里程计 -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <odometry_frame>{CAR_NAME}_odom</odometry_frame>
+      <robot_base_frame>{CAR_NAME}/base_link</robot_base_frame>
+    </plugin>
+
+    <!-- ==================== 故障模拟插件 ==================== -->
+    <plugin name="fault_sim" filename="libv2x_fault_sim.so">
+      <ros>
+        <namespace>/{CAR_NAME}</namespace>
+      </ros>
+      <enabled>false</enabled>
+    </plugin>
+
+  </model>
+</sdf>

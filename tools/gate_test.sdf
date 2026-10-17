@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!-- 临时卡口验证相机：架在南环西行车道 y=-14.6 上方 2.2 m，朝西俯视。
+     车流方向为 -X，车尾朝 +X 正对相机，用于验证 plate_rear 纹理真的进了相机画面。
+     这是 #31 龙门架相机的最小原型，验证通过后写进 world 常驻。 -->
+<sdf version="1.6">
+  <model name="gate_test">
+    <static>true</static>
+    <pose>-3.5 -14.6 8.9 0 0.35 3.14159</pose>
+    <link name="link">
+      <visual name="box">
+        <geometry><box><size>0.3 0.2 0.15</size></box></geometry>
+        <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+      <sensor name="gate_camera" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <visualize>true</visualize>
+        <camera name="gate_cam">
+          <horizontal_fov>1.0</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>60</far>
+          </clip>
+        </camera>
+        <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/gate_test</namespace>
+            <remapping>~/image_raw:=camera/image_raw</remapping>
+            <remapping>~/camera_info:=camera/camera_info</remapping>
+          </ros>
+          <camera_name>gate_cam</camera_name>
+          <frame_name>gate_test/camera_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+  </model>
+</sdf>

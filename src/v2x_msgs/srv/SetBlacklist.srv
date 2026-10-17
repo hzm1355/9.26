@@ -1,0 +1,15 @@
+# 黑名单维护（协议 §三.(三).5）：增删/清空/查询黑名单车牌，命中由识别侧触发 PlateAlert。
+uint8 OP_ADD=0
+uint8 OP_REMOVE=1
+uint8 OP_CLEAR=2
+uint8 OP_LIST=3
+uint8 op
+string[] plate_numbers      # 逗号外的车牌号列表；OP_CLEAR 时忽略
+string[] reasons            # 与 plate_numbers 一一对应的入黑原因，可短于名单
+uint8[] levels              # 与 plate_numbers 一一对应的告警级别，缺省按 WARN
+---
+bool success
+string message
+string[] blacklist          # 变更后的完整名单
+string[] blacklist_reasons  # 与 blacklist 一一对应
+uint8[] blacklist_levels    # 与 blacklist 一一对应

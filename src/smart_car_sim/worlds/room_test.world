@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="room_test">
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step>0.001</max_step>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- 33平米房间（简化为盒子，约6m x 5.5m） -->
+    <model name="room_33">
+      <static>true</static>
+      <pose>0 0 1.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>6 5.5 3</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>6 5.5 3</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- 20平米房间（约4.5m x 4.5m） -->
+    <model name="room_20">
+      <static>true</static>
+      <pose>15 0 1.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>4.5 4.5 3</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.8 0.7 1</ambient>
+            <diffuse>0.7 0.8 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4.5 4.5 3</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- 12平米房间（约3.5m x 3.5m） -->
+    <model name="room_12">
+      <static>true</static>
+      <pose>28 0 1.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>3.5 3.5 3</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.7 0.7 1</ambient>
+            <diffuse>0.8 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3.5 3.5 3</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <plugin name="gazebo_ros_init" filename="libgazebo_ros_init.so"/>
+    <plugin name="gazebo_ros_factory" filename="libgazebo_ros_factory.so"/>
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+  </world>
+</sdf>

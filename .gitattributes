@@ -1,0 +1,24 @@
+# 本项目在 WSL 里直接跑 D 树文件，脚本必须保持 LF；
+# 否则 .sh/.py 带 CR 会让 bash 报 "command not found"、launch 起不来。
+* text=auto eol=lf
+
+*.py  text eol=lf
+*.sh  text eol=lf
+*.bash text eol=lf
+*.bat text eol=crlf
+
+*.world text eol=lf
+*.sdf   text eol=lf
+*.yaml  text eol=lf
+*.xml   text eol=lf
+
+*.obj binary
+*.dae binary
+*.stl binary
+*.fbx binary
+*.glb binary
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.zip binary
+*.rar binary

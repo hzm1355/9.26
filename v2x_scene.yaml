@@ -1,0 +1,117 @@
+# ============================================================================
+# v2x_scene.yaml —— V2X 虚拟场景唯一配置源（协议 §3 场景建模）
+# scene_builder.py 读取本文件生成 worlds/v2x_city.world 与 config/scene_devices.yaml
+# 修改路口位置/车道数量/设备点位只需改本文件后重新生成，无需手改 SDF。
+# 坐标系：world = odom = 初始 map，单位米/弧度。J1 主十字路口为原点。
+# ============================================================================
+
+global:
+  name: v2x_city
+  ground: {size: [300, 300], color: [0.35, 0.55, 0.30]}
+  sun: {direction: [-0.5, 0.1, -0.9]}
+  asphalt: {color: [0.15, 0.15, 0.15]}        # 沥青色
+  zebra_color: [0.92, 0.92, 0.92]             # 斑马线白
+  yellow: [0.90, 0.80, 0.10]                  # 标线黄
+
+# ───────────────── 道路拓扑（节点=路口，边=路段） ─────────────────
+topology:
+  nodes:
+    J1: {pose: [0, 0],     type: cross,    label: 主十字路口}
+    J2: {pose: [0, -30],   type: cross,    label: 学校路口}
+    N1: {pose: [0, 30],    type: endpoint, label: 北端点}
+    N2: {pose: [0, -40],   type: endpoint, label: 学校前终点}
+    E1: {pose: [30, 0],    type: endpoint, label: 东端点}
+    W1: {pose: [-30, 0],   type: endpoint, label: 西端点}
+  edges:
+    # lanes_per_dir=每向车道数; lane_width=车道宽; median=中央分隔带宽; shoulder=路肩
+    - {id: NS-north,  a: J1, b: N1, lanes_per_dir: 2, lane_width: 3.0, median: 0.2, shoulder: 0.3, speed_limit: 30}
+    - {id: NS-main,   a: J1, b: J2, lanes_per_dir: 2, lane_width: 3.0, median: 0.2, shoulder: 0.3, speed_limit: 30}
+    - {id: NS-school, a: J2, b: N2, lanes_per_dir: 2, lane_width: 3.0, median: 0.2, shoulder: 0.3, speed_limit: 20}
+    - {id: EW-east,   a: J1, b: E1, lanes_per_dir: 2, lane_width: 3.0, median: 0.2, shoulder: 0.3, speed_limit: 30}
+    - {id: EW-west,   a: J1, b: W1, lanes_per_dir: 2, lane_width: 3.0, median: 0.2, shoulder: 0.3, speed_limit: 30}
+  # 人行横道自动布设：cross 节点的每条邻边，距路口中心 offset 米处
+  crosswalk:
+    zebra: {offset: 9.5, stripe_w: 0.5, gap: 0.6}   # 条纹宽/间隔（跨全路）
+    stopline: {offset: 11.5, width: 0.45}            # 停止线（来车侧半幅）
+
+# ───────────────── 高架段（自建几何：路面+护栏+立柱） ─────────────────
+elevated:
+  - id: VIADUCT-01
+    path: [[0, 6], [0, 26]]      # 高架中心线（投影到地面坐标）
+    z: 7.0                       # 路面高度（底面净空 6.7m，高于下方 ETC 门架）
+    width: 8.0
+    guard_rail: 0.55             # 护栏高
+    pillar: {interval: 8.0, size: [0.7, 0.7]}
+    label: 南北主路上跨高架
+
+# ───────────────── 停车场（车位划线+出入口道闸+P牌+联络道） ─────────────────
+parking:
+  - id: PKG-NW
+    center: [-24, 17]          # y 起 9，避让 EW-west 行道树带（y≈±8.2）
+    yaw: 0
+    rows: 2
+    stalls_per_row: 6
+    stall: {width: 2.6, depth: 5.0}
+    aisle: 6.0
+    gate: {side: south}          # 出入口朝南接 EW-west 路段（自动生成联络道）
+    label: 西北地面停车场
+
+# ───────────────── ETC 门架点位（坐标同步写入设备表） ─────────────────
+etc_gantries:
+  - {id: ETC-01, pose: [0, -8], span: 14.0, height: 5.5, yaw: 0,  road: NS-main,   lanes: 4, label: 南段 ETC 门架}
+  - {id: ETC-02, pose: [0, 13], span: 14.0, height: 5.5, yaw: 0,  road: NS-north,  lanes: 4, label: 北段 ETC 门架}
+
+# ───────────────── 路侧单元 RSU（杆+设备盒） ─────────────────
+rsu:
+  - {id: RSU-J1-NE, pose: [7.5, 7.5],   height: 4.0, label: J1 东北角 RSU}
+  - {id: RSU-J1-SW, pose: [-7.5, -7.5], height: 4.0, label: J1 西南角 RSU}
+  - {id: RSU-J2-NW, pose: [-7.5, -23],  height: 4.0, label: J2 西北角 RSU}
+
+# ───────────────── 交通信号灯（内联生成，灯球 emissive 由 v2x_traffic_light 插件点亮） ─────────────────
+# group：信号组名，同组同步；组间相位差/绿波在 traffic_light_params.yaml 的 groups 里配置。
+#   J1 路口：南北向(J1_ns) 与 东西向(J1_ew) 反相放行；J2：绿波协调(J2_ns)。
+traffic_lights:
+  - {id: TL-J1-NE, pose: [6.5, 6.5],   yaw: -1.5708, face: J1, group: J1_ns, label: J1 东北灯}
+  - {id: TL-J1-NW, pose: [-6.5, 6.5],  yaw: 1.5708,  face: J1, group: J1_ew, label: J1 西北灯}
+  - {id: TL-J1-SE, pose: [6.5, -6.5],  yaw: -1.5708, face: J1, group: J1_ew, label: J1 东南灯}
+  - {id: TL-J1-SW, pose: [-6.5, -6.5], yaw: 1.5708,  face: J1, group: J1_ns, label: J1 西南灯}
+  - {id: TL-J2-E,  pose: [6.5, -30],   yaw: -1.5708, face: J2, group: J2_ns, label: J2 东侧灯}
+  - {id: TL-J2-W,  pose: [-6.5, -30],  yaw: 1.5708,  face: J2, group: J2_ns, label: J2 西侧灯}
+
+# ───────────────── 绿化（参数化自建树：圆柱树干+球树冠，seed 定形态） ─────────────────
+greenery:
+  - {id: TREES-NS-N,  along: NS-north,  side: both, offset: 2.0, interval: 5, seed: 7,  label: 北段行道树}
+  - {id: TREES-NS-M,  along: NS-main,   side: both, offset: 2.0, interval: 5, seed: 8,  label: 中段行道树}
+  - {id: TREES-NS-S,  along: NS-school, side: both, offset: 2.0, interval: 5, seed: 11, label: 学校段行道树}
+  - {id: TREES-EW-W,  along: EW-west,    side: both, offset: 2.0, interval: 5, seed: 9,  label: 西段行道树}
+  - {id: TREES-EW-E,  along: EW-east,   side: both, offset: 2.0, interval: 5, seed: 10, label: 东段行道树}
+
+# ───────────────── 大型地物（复用 gazebo_models-master） ─────────────────
+# z_offset 用于贴地修正（mesh 原点不在地面的模型，如 school 原点悬空 4.13m）
+landmarks:
+  - {id: SCHOOL-01,  uri: model://school,          pose: [0, -48, 0],  yaw: 0,     z_offset: -4.13, label: 学校教学楼}
+  - {id: OFFICE-NW,  uri: model://office_building,  pose: [-20, 28, 0], yaw: 0.785, z_offset: 0,    label: 办公楼}
+  - {id: TOWER-NE,   uri: model://law_office,       pose: [26, 10, 0],  yaw: -0.785, z_offset: 0,  label: 写字楼}
+
+# ───────────────── 历史激光锚点（素 box，保留已验证的 SLAM/Nav2 要素） ─────────────────
+legacy_anchors:
+  - {id: building_ne, pose: [18, 18, 3],   size: [10, 10, 6], label: 东北建筑}
+  - {id: building_sw, pose: [-18, -18, 2], size: [8, 8, 4],    label: 西南建筑}
+  - {id: building_e1,  pose: [11, -16, 2], size: [8, 8, 4],    label: 东侧建筑1}
+  - {id: building_e2,  pose: [10, -6, 2.5], size: [7, 7, 5],   label: 东侧建筑2}
+  - {id: obstacle_1,   pose: [3, -12, 0.5], size: [1.8, 4, 1], label: 路内抛锚车（避障测试要素）}
+
+# ───────────────── 场景相机（供可视化界面"实景3D"取 Gazebo 真实渲染画面） ─────────────────
+# 界面用 /set_entity_state 驱动该相机位姿（轨道相机参数），并订阅其 image_raw 显示。
+# kinematic=true：不受物理力影响、但位姿可被外部设置。
+scene_camera:
+  id: v2x_scene_cam
+  width: 960
+  height: 600
+  hfov: 1.15            # 水平视场角(弧度)
+  update_rate: 25
+  default:              # 界面默认轨道相机
+    target: [0, -4, 1]
+    yaw: -60            # 度
+    pitch: 22           # 度
+    dist: 60

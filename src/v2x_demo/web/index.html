@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V2X 智能交通 3D 可视化</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; background: #1a1a2e; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    canvas { display: block; }
+
+    #ui-panel {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(20, 20, 40, 0.92); color: #eee;
+      padding: 15px; border-radius: 8px; width: 280px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      max-height: calc(100vh - 20px); overflow-y: auto;
+    }
+    #ui-panel h2 { font-size: 16px; margin-bottom: 12px; color: #4fc3f7; }
+    #ui-panel h3 { font-size: 13px; margin: 10px 0 6px; color: #81c784; }
+
+    .status-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .status-row .label { font-size: 12px; color: #aaa; }
+    .status-row .value { font-size: 13px; font-weight: bold; }
+
+    .light-indicator {
+      display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.3);
+    }
+    .light-red { background: #ff1744; box-shadow: 0 0 8px #ff1744; }
+    .light-yellow { background: #ffea00; box-shadow: 0 0 8px #ffea00; }
+    .light-green { background: #00e676; box-shadow: 0 0 8px #00e676; }
+    .light-off { background: #333; }
+
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .btn {
+      padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-weight: bold; transition: all 0.2s;
+    }
+    .btn:hover { transform: scale(1.05); }
+    .btn-preset { background: #1976d2; color: white; }
+    .btn-preset.active { background: #42a5f5; box-shadow: 0 0 10px #42a5f5; }
+    .btn-emergency { background: #d32f2f; color: white; }
+    .btn-emergency.active { background: #ff5252; box-shadow: 0 0 10px #ff5252; animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    #connection-status {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(20, 20, 40, 0.9); color: #eee;
+      padding: 8px 14px; border-radius: 6px; font-size: 12px;
+    }
+    .connected { color: #00e676; }
+    .disconnected { color: #ff5252; }
+
+    #info-panel {
+      position: absolute; bottom: 10px; left: 10px;
+      background: rgba(20, 20, 40, 0.9); color: #aaa;
+      padding: 10px; border-radius: 6px; font-size: 11px;
+    }
+
+    .ped-status {
+      font-size: 11px; padding: 3px 8px; border-radius: 3px;
+      display: inline-block; margin-top: 2px;
+    }
+    .ped-walk { background: #00e676; color: #000; }
+    .ped-dont-walk { background: #ff1744; color: #fff; }
+    .ped-flashing { background: #ffea00; color: #000; animation: pulse 0.5s infinite; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-panel">
+    <h2>V2X 智能交通仿真</h2>
+
+    <h3>信号灯状态</h3>
+    <div id="light-status"></div>
+
+    <h3>配时预设</h3>
+    <div class="btn-group">
+      <button class="btn btn-preset" data-preset="default">默认</button>
+      <button class="btn btn-preset" data-preset="peak">高峰</button>
+      <button class="btn btn-preset" data-preset="offpeak">平峰</button>
+      <button class="btn btn-preset" data-preset="night">夜间</button>
+    </div>
+
+    <h3>紧急控制</h3>
+    <div class="btn-group">
+      <button class="btn btn-emergency" id="btn-emergency">紧急模式</button>
+    </div>
+
+    <h3>车辆信息</h3>
+    <div id="vehicle-info">
+      <div class="status-row">
+        <span class="label">在线车辆</span>
+        <span class="value" id="vehicle-count">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="connection-status">
+    <span id="ws-status" class="disconnected">● 未连接</span>
+  </div>
+
+  <div id="info-panel">
+    鼠标左键旋转 | 滚轮缩放 | 右键平移
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ============ 场景初始化 ============
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    scene.fog = new THREE.Fog(0x1a1a2e, 100, 300);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(50, 60, 50);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2.1;
+
+    // ============ 光照 ============
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(50, 80, 30);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.camera.left = -60;
+    dirLight.shadow.camera.right = 60;
+    dirLight.shadow.camera.top = 60;
+    dirLight.shadow.camera.bottom = -60;
+    scene.add(dirLight);
+
+    // ============ 地面 ============
+    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x2d5a2d });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ============ 道路 ============
+    const roadMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const ROAD_WIDTH = 12;
+    const ROAD_LENGTH = 120;
+
+    // 南北向道路
+    const nsRoad = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH), roadMat);
+    nsRoad.rotation.x = -Math.PI / 2;
+    nsRoad.position.y = 0.01;
+    nsRoad.receiveShadow = true;
+    scene.add(nsRoad);
+
+    // 东西向道路
+    const ewRoad = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_LENGTH, ROAD_WIDTH), roadMat);
+    ewRoad.rotation.x = -Math.PI / 2;
+    ewRoad.position.y = 0.01;
+    ewRoad.receiveShadow = true;
+    scene.add(ewRoad);
+
+    // 路口区域
+    const intersectionArea = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_WIDTH, ROAD_WIDTH), roadMat);
+    intersectionArea.rotation.x = -Math.PI / 2;
+    intersectionArea.position.y = 0.02;
+    scene.add(intersectionArea);
+
+    // 车道线（虚线）
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let i = -55; i < 55; i += 6) {
+      if (Math.abs(i) < 8) continue;
+      // NS 道路中线
+      const nsLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 3), lineMat);
+      nsLine.rotation.x = -Math.PI / 2;
+      nsLine.position.set(0, 0.03, i);
+      scene.add(nsLine);
+      // EW 道路中线
+      const ewLine = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.2), lineMat);
+      ewLine.rotation.x = -Math.PI / 2;
+      ewLine.position.set(i, 0.03, 0);
+      scene.add(ewLine);
+    }
+
+    // 人行横道
+    const crosswalkMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    function createCrosswalk(x, z, horizontal) {
+      for (let i = -5; i <= 5; i += 1.5) {
+        const stripe = new THREE.Mesh(
+          new THREE.PlaneGeometry(horizontal ? 0.8 : 4, horizontal ? 4 : 0.8),
+          crosswalkMat
+        );
+        stripe.rotation.x = -Math.PI / 2;
+        stripe.position.set(horizontal ? x + i : x, 0.03, horizontal ? z : z + i);
+        scene.add(stripe);
+      }
+    }
+    createCrosswalk(0, 9, true);   // 北
+    createCrosswalk(0, -9, true);  // 南
+    createCrosswalk(9, 0, false);  // 东
+    createCrosswalk(-9, 0, false); // 西
+
+    // ============ 交通灯 ============
+    const trafficLights = {};
+    const LIGHT_POSITIONS = {
+      J1_NE: { pos: [7, 0, 7], rot: 0, group: 'J1_ew' },
+      J1_NW: { pos: [-7, 0, 7], rot: Math.PI, group: 'J1_ew' },
+      J1_SE: { pos: [7, 0, -7], rot: -Math.PI / 2, group: 'J1_ew' },
+      J1_SW: { pos: [-7, 0, -7], rot: Math.PI / 2, group: 'J1_ew' },
+    };
+
+    const PEDESTRIAN_LIGHTS = {
+      PED_N: { pos: [5, 0, 9], rot: Math.PI },
+      PED_S: { pos: [-5, 0, -9], rot: 0 },
+      PED_E: { pos: [9, 0, -5], rot: Math.PI / 2 },
+      PED_W: { pos: [-9, 0, 5], rot: -Math.PI / 2 },
+    };
+
+    function createTrafficLight(x, z, rotation) {
+      const group = new THREE.Group();
+
+      // 灯杆
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 5, 8),
+        new THREE.MeshLambertMaterial({ color: 0x444444 })
+      );
+      pole.position.y = 2.5;
+      pole.castShadow = true;
+      group.add(pole);
+
+      // 灯壳
+      const housing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 2.4, 0.6),
+        new THREE.MeshLambertMaterial({ color: 0x222222 })
+      );
+      housing.position.y = 4.5;
+      housing.castShadow = true;
+      group.add(housing);
+
+      // 三个灯球
+      const colors = [0xff0000, 0xffff00, 0x00ff00];
+      const lights = [];
+      for (let i = 0; i < 3; i++) {
+        const light = new THREE.Mesh(
+          new THREE.SphereGeometry(0.25, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x111111 })
+        );
+        light.position.set(0, 5.2 - i * 0.7, 0.35);
+        group.add(light);
+
+        const pointLight = new THREE.PointLight(colors[i], 0, 3);
+        pointLight.position.copy(light.position);
+        group.add(pointLight);
+
+        lights.push({ mesh: light, point: pointLight, color: colors[i] });
+      }
+
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      return { group, lights };
+    }
+
+    function createPedestrianLight(x, z, rotation) {
+      const group = new THREE.Group();
+
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.1, 3.5, 8),
+        new THREE.MeshLambertMaterial({ color: 0x444444 })
+      );
+      pole.position.y = 1.75;
+      group.add(pole);
+
+      const housing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 1.2, 0.4),
+        new THREE.MeshLambertMaterial({ color: 0x222222 })
+      );
+      housing.position.y = 3.2;
+      group.add(housing);
+
+      const lights = [];
+      // 红手 (上)
+      const redHand = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x111111 })
+      );
+      redHand.position.set(0, 3.5, 0.25);
+      group.add(redHand);
+      const redPoint = new THREE.PointLight(0xff0000, 0, 2);
+      redPoint.position.copy(redHand.position);
+      group.add(redPoint);
+      lights.push({ mesh: redHand, point: redPoint, type: 'red_hand' });
+
+      // 绿人 (下)
+      const greenWalk = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x111111 })
+      );
+      greenWalk.position.set(0, 2.9, 0.25);
+      group.add(greenWalk);
+      const greenPoint = new THREE.PointLight(0x00ff00, 0, 2);
+      greenPoint.position.copy(greenWalk.position);
+      group.add(greenPoint);
+      lights.push({ mesh: greenWalk, point: greenPoint, type: 'green_walking' });
+
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      return { group, lights };
+    }
+
+    // 创建车辆交通灯
+    for (const [name, cfg] of Object.entries(LIGHT_POSITIONS)) {
+      trafficLights[name] = createTrafficLight(...cfg.pos, cfg.rot);
+      trafficLights[name].group_id = cfg.group;
+      trafficLights[name].currentPhase = 'RED';
+    }
+
+    // 创建行人交通灯
+    const pedestrianLights = {};
+    for (const [name, cfg] of Object.entries(PEDESTRIAN_LIGHTS)) {
+      pedestrianLights[name] = createPedestrianLight(...cfg.pos, cfg.rot);
+    }
+
+    // ============ 车辆 ============
+    const vehicles = {};
+    const vehicleColors = [0x2196f3, 0x4caf50, 0xff9800, 0x9c27b0, 0xf44336, 0x00bcd4];
+
+    function createVehicle(name) {
+      const color = vehicleColors[Object.keys(vehicles).length % vehicleColors.length];
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 0.8, 4),
+        new THREE.MeshLambertMaterial({ color })
+      );
+      body.position.y = 0.6;
+      body.castShadow = true;
+      group.add(body);
+
+      const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 0.6, 2),
+        new THREE.MeshLambertMaterial({ color: 0x333333 })
+      );
+      roof.position.y = 1.2;
+      roof.position.z = -0.3;
+      group.add(roof);
+
+      // 轮子
+      const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+      const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+      const wheelPositions = [[-0.9, 0.3, 1.2], [0.9, 0.3, 1.2], [-0.9, 0.3, -1.2], [0.9, 0.3, -1.2]];
+      for (const [wx, wy, wz] of wheelPositions) {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, wy, wz);
+        group.add(wheel);
+      }
+
+      scene.add(group);
+      return group;
+    }
+
+    // ============ 信号灯更新 ============
+    function updateTrafficLight(name, phase) {
+      const tl = trafficLights[name];
+      if (!tl) return;
+
+      tl.currentPhase = phase;
+      const phaseUpper = phase.toUpperCase();
+
+      for (let i = 0; i < tl.lights.length; i++) {
+        const light = tl.lights[i];
+        const isActive =
+          (phaseUpper === 'RED' && i === 0) ||
+          (phaseUpper === 'YELLOW' && i === 1) ||
+          (phaseUpper === 'GREEN' && i === 2);
+
+        if (isActive) {
+          light.mesh.material.color.setHex(light.color);
+          light.mesh.material.emissive = new THREE.Color(light.color);
+          light.point.intensity = 2;
+        } else {
+          light.mesh.material.color.setHex(0x111111);
+          light.mesh.material.emissive = new THREE.Color(0x000000);
+          light.point.intensity = 0;
+        }
+      }
+    }
+
+    function updatePedestrianLight(name, phase) {
+      const pl = pedestrianLights[name];
+      if (!pl) return;
+
+      const phaseUpper = phase.toUpperCase();
+      for (const light of pl.lights) {
+        const isRedActive = phaseUpper === 'DONT_WALK' || phaseUpper === 'FLASHING';
+        const isGreenActive = phaseUpper === 'WALK';
+
+        if (light.type === 'red_hand') {
+          if (isRedActive) {
+            light.mesh.material.color.setHex(0xff0000);
+            light.point.intensity = phaseUpper === 'FLASHING' ? (Math.sin(Date.now() / 200) > 0 ? 2 : 0) : 2;
+          } else {
+            light.mesh.material.color.setHex(0x111111);
+            light.point.intensity = 0;
+          }
+        } else if (light.type === 'green_walking') {
+          if (isGreenActive) {
+            light.mesh.material.color.setHex(0x00ff00);
+            light.point.intensity = 2;
+          } else {
+            light.mesh.material.color.setHex(0x111111);
+            light.point.intensity = 0;
+          }
+        }
+      }
+    }
+
+    function updateVehicle(name, data) {
+      if (!vehicles[name]) {
+        vehicles[name] = createVehicle(name);
+      }
+      const v = vehicles[name];
+      v.position.set(data.x, 0, -data.y);
+      v.rotation.y = -data.yaw + Math.PI / 2;
+    }
+
+    function removeVehicle(name) {
+      if (vehicles[name]) {
+        scene.remove(vehicles[name]);
+        delete vehicles[name];
+      }
+    }
+
+    // ============ UI 更新 ============
+    function updateLightStatusUI(groupStates) {
+      const container = document.getElementById('light-status');
+      let html = '';
+      for (const [group, state] of Object.entries(groupStates)) {
+        const phase = state.phase || 'RED';
+        const remaining = state.remaining || 0;
+        const controlMode = state.control_mode || 'FIXED';
+        const lightClass = phase === 'GREEN' ? 'light-green' : phase === 'YELLOW' ? 'light-yellow' : 'light-red';
+
+        // 行人灯态
+        let pedPhase = state.pedestrian_phase;
+        if (!pedPhase) {
+          if (phase === 'GREEN') pedPhase = 'DONT_WALK';
+          else if (phase === 'YELLOW') pedPhase = 'FLASHING';
+          else pedPhase = 'WALK';
+        }
+        const pedClass = pedPhase === 'WALK' ? 'ped-walk' : pedPhase === 'FLASHING' ? 'ped-flashing' : 'ped-dont-walk';
+        const pedText = pedPhase === 'WALK' ? '通行' : pedPhase === 'FLASHING' ? '闪烁' : '禁行';
+
+        html += `
+          <div class="status-row">
+            <span class="label">${group} <span style="color:#666;font-size:10px;">[${controlMode}]</span></span>
+            <span>
+              <span class="light-indicator ${lightClass}"></span>
+              <span class="value">${phase}</span>
+              <span style="color:#888; font-size:11px; margin-left:4px;">${remaining.toFixed(1)}s</span>
+            </span>
+          </div>
+          <div style="padding: 2px 0 6px 0;">
+            <span style="font-size:11px; color:#888;">行人:</span>
+            <span class="ped-status ${pedClass}">${pedText}</span>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    // ============ WebSocket ============
+    let ws = null;
+    let groupStates = {};
+    let reconnectTimer = null;
+
+    function connectWebSocket() {
+      const wsUrl = `ws://${location.hostname}:8765`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('ws-status').textContent = '● 已连接';
+        document.getElementById('ws-status').className = 'connected';
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = () => {
+        document.getElementById('ws-status').textContent = '● 未连接';
+        document.getElementById('ws-status').className = 'disconnected';
+        reconnectTimer = setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    function handleMessage(msg) {
+      if (msg.type === 'traffic_light') {
+        groupStates[msg.group] = {
+          phase: msg.phase,
+          remaining: msg.remaining || 0,
+          pedestrian_phase: msg.pedestrian_phase || '',
+          control_mode: msg.control_mode || 'FIXED',
+        };
+
+        // 更新对应的交通灯
+        for (const [name, cfg] of Object.entries(LIGHT_POSITIONS)) {
+          if (cfg.group === msg.group) {
+            updateTrafficLight(name, msg.phase);
+          }
+        }
+
+        // 更新行人灯（优先使用消息中的行人相位，否则从机动车灯推断）
+        let pedPhase = msg.pedestrian_phase;
+        if (!pedPhase) {
+          if (msg.phase === 'GREEN') pedPhase = 'DONT_WALK';
+          else if (msg.phase === 'YELLOW') pedPhase = 'FLASHING';
+          else pedPhase = 'WALK';
+        }
+
+        for (const name of Object.keys(PEDESTRIAN_LIGHTS)) {
+          updatePedestrianLight(name, pedPhase);
+        }
+
+        updateLightStatusUI(groupStates);
+
+      } else if (msg.type === 'vehicles') {
+        const currentNames = new Set();
+        for (const v of msg.data) {
+          currentNames.add(v.name);
+          updateVehicle(v.name, v);
+        }
+        // 移除不存在的车辆
+        for (const name of Object.keys(vehicles)) {
+          if (!currentNames.has(name)) {
+            removeVehicle(name);
+          }
+        }
+        document.getElementById('vehicle-count').textContent = msg.data.length;
+      }
+    }
+
+    function sendCommand(action, value) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'command', action, value }));
+      }
+    }
+
+    // ============ UI 事件 ============
+    document.querySelectorAll('.btn-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        sendCommand('preset', btn.dataset.preset);
+      });
+    });
+
+    document.getElementById('btn-emergency').addEventListener('click', function() {
+      this.classList.toggle('active');
+      sendCommand('emergency', this.classList.contains('active'));
+    });
+
+    // ============ 动画循环 ============
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      // 行人灯闪烁效果
+      for (const pl of Object.values(pedestrianLights)) {
+        for (const light of pl.lights) {
+          if (light.type === 'red_hand' && light.point.intensity > 0) {
+            // 检查是否在闪烁模式（由 UI 状态判断）
+            const anyGroup = Object.values(groupStates)[0];
+            if (anyGroup && anyGroup.phase === 'YELLOW') {
+              light.point.intensity = Math.sin(Date.now() / 200) > 0 ? 2 : 0;
+            }
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // ============ 窗口调整 ============
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ============ 启动 ============
+    animate();
+    connectWebSocket();
+
+    // 初始化所有灯为红灯
+    for (const name of Object.keys(LIGHT_POSITIONS)) {
+      updateTrafficLight(name, 'RED');
+    }
+    for (const name of Object.keys(PEDESTRIAN_LIGHTS)) {
+      updatePedestrianLight(name, 'DONT_WALK');
+    }
+  </script>
+</body>
+</html>

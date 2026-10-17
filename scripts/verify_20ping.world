@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="verify_20ping">
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+    </scene>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!-- 仅用于验证 room_20ping.obj 能否被 Gazebo 网格加载器解析；无 ROS 插件 -->
+    <model name="room_20ping">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>model://room_20ping/meshes/room_20ping.obj</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>model://room_20ping/meshes/room_20ping.obj</uri>
+            </mesh>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+  </world>
+</sdf>

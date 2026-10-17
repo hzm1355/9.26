@@ -1,0 +1,24 @@
+# ============================================================================
+# arena_regions.yaml —— 算法仿真场地的区域定义
+# ============================================================================
+# 用于区域触发底座（region_trigger_node），定义场地内的功能区域。
+# 坐标与 algorithm_arena.world 一致（world 帧，单位 m）。
+regions:
+  # 起点区域（南墙附近）
+  - {id: START_zone,    type: checkpoint,  center: [0, -20, 1.0],  size: [40.0, 4.0, 3.0]}
+
+  # 中央障碍区
+  - {id: CENTER_zone,   type: custom,      center: [0, 0, 1.0],    size: [6.0, 6.0, 3.0]}
+
+  # 东北通道区
+  - {id: NE_corridor,   type: custom,      center: [12, 12, 1.0],  size: [8.0, 8.0, 3.0]}
+
+  # 西南通道区
+  - {id: SW_corridor,   type: custom,      center: [-12, -12, 1.0], size: [8.0, 8.0, 3.0]}
+
+  # 测速路段（南北方向）
+  - {id: SPEED-A,       type: speed_point, center: [0, -10, 1.0],  size: [40.0, 0.5, 3.0]}
+  - {id: SPEED-B,       type: speed_point, center: [0, 10, 1.0],   size: [40.0, 0.5, 3.0]}
+
+  # 终点区域（北墙附近）
+  - {id: END_zone,      type: checkpoint,  center: [0, 22, 1.0],   size: [40.0, 4.0, 3.0]}

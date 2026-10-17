@@ -1,0 +1,9 @@
+# 自定义车牌号码（协议 §三.(三).1）：给指定车辆的指定车牌位挂一块新牌。
+# 由 plate_manager 节点实现：渲染纹理 -> 分配序号 -> 通知 v2x_plate 插件换材质。
+string vehicle_id       # Gazebo 模型名，如 car_1
+string slot             # rear / front
+string number           # 车牌号，如 沪A12345；"-" 表示还原成占位牌
+---
+bool success
+string message
+string seq              # 生成的车牌序号（如 p00007），失败或还原时为空

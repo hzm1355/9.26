@@ -1,0 +1,57 @@
+# ===== 构建产物 / 运行态 =====
+build/
+install/
+log/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+
+# ===== 上游第三方包：各自是独立 git 仓库，按 README 自行获取 =====
+third_party/
+
+# ===== 二进制资产：网格 / 贴图 =====
+# 沙盘两只 471 MB 网格放在资产仓库 9.26.2，其余网格体积过大也不进代码仓库
+*.obj
+*.mtl
+*.dae
+*.stl
+*.fbx
+*.glb
+*.gltf
+*.ply
+*.png
+*.jpg
+*.jpeg
+*.pgm
+*.ppm
+
+# ===== 压缩包 / 录屏 =====
+*.rar
+*.zip
+*.7z
+*.mp4
+*.avi
+*.mkv
+
+# ===== 取证产物：证据目录 / 记录 / 台账 =====
+evidence/
+*.jsonl
+*.json
+*.csv
+*.log
+*.bak
+*.tmp
+# 现场留档的旧副本（.pre_xxx / .bak_before_xxx / 快照）
+*.pre_*
+*.bak_*
+*.bak_*_*
+*_old
+*_stale
+
+# ===== 根目录调试留痕（_xxx.txt / _diagNNN / 截图）=====
+_*
+
+# ===== 交付报告类文档（public 仓库不放）=====
+*报告*.md
+*台账*.md

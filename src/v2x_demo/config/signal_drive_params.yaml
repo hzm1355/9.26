@@ -1,0 +1,142 @@
+# 按灯行驶配置（协议 §三.(二) —— 车辆红灯停绿灯行）
+#
+# route      : 航点列表（世界坐标，单位 m）。mode=loop 时按顺序循环行驶。
+# mode       : loop=环线单向行驶（默认，避免同车道对向）；shuttle=往返
+# start_idx  : 起始航点下标，用于让多辆车首尾相接排队
+# arrive_radius / wp_timeout : 到点判定半径 / 单航点超时（卡死自动跳过）
+# cruise_speed : 巡航速度 m/s
+#                2026-10-17 0.7 → 0.85（用户第三轮"适当提速"）。连带口径要认账：
+#                  * 任务四报告与取证视频里写的"车队巡航真值 2.52 km/h（0.70 m/s）"
+#                    自此只对**归档那一批**成立，重跑 speed_* 脚本要先按 3.06 km/h 改真值；
+#                  * speed_zones.yaml 的 limit 2.0/3.0/4.0 三档里，2.0 档仍告警、4.0 档
+#                    仍放行；3.0 档落在 3.06 的边上（雷达噪声 ±0.3），从"稳定不告警"
+#                    变成"贴阈值来回抖"——重录任务四时这一档的读数不再当判据用；
+#                  * speed_detect_node 的物理上限是 yaml 里的 max_sane_kmh=12，不是巡航值，
+#                    护栏不会因为提速误杀真实行驶。
+#                刹停律是 v = k_stop·剩余距离 的比例律（不是固定提前量），提速只是把
+#                减速起点外推，越线风险由 standoff（2.4/1.6）兜着，红线仍停得住。
+#                ⚠ tools/speed_sweep.sh（任务三四档扫参）跑完会把 home 侧副本硬恢复成
+#                  cruise_speed: 0.7 —— 那是归档脚本，本轮没动它。谁再跑它，#128 就在家
+#                  目录里被静默回退，下一次联调得先看这五行是不是 0.85。
+# obey       : 本车需要服从的停车线
+#   group    : 信号灯组名（对应 traffic_light/<group>/state）
+#   x,y      : 停车线上的点
+#   heading  : 该停车线的"来车方向"（弧度）。只有车头朝向与此方向一致时才受这条线
+#              约束，因此同一条线只拦迎面来车，不会拦住已通过或正在驶离的车辆
+#   standoff : 车头到停车线的停车预留距离（m）
+#   lane_half: 横向容差（m），超出则认为不在该车道
+#
+# ============================ 全地图路网（沙盘 10× 后 50 m × 50 m） ============
+#   中轴干道  x≈0.5   南北向双车道：北行 x=+1.8 / 南行 x=-0.8
+#   北侧环路  y≈1.5   东西向：两环东行车道同为 y=+1.5
+#   南侧环路  y≈-16.8 东西向：两环西行车道同为 y=-16.8
+#   西侧环路  x≈-21.8 南北向：北行车道 x=-21.8
+#   东侧环路  x≈+20.8 南北向：南行车道 x=+20.8（外绕停车场，见下面 2026-10-14 第二次挪动）
+#
+#   南北环路从 4.6/-14.6 挪到 1.5/-16.8、东西外环从 -19.6/16.8 挪到 -21.8/14.5，
+#   依据是 tools/route_corridor_scan.py 的"落地障碍高度图"：旧坐标是按沙盘地面涂装
+#   描的，网格上那些位置压着建筑和 1 m 高的柱廊/护栏，车照路线走必然穿楼。
+#   新坐标取扫描出的**全程净空带的正中**（车体矩形 ±0.5 m 内没有 >=0.45 m 的落地
+#   几何，且到最近障碍还有 1~2 m 余量），不是净空带端点——端点只剩 0~0.3 m 余量，
+#   横向控制一抖就蹭。
+#   复跑校验：python3 tools/route_corridor_scan.py --hblock=0.45 --reach=8
+#             → 【一】每辆车的"撞楼总长"必须为 0
+#
+#   2026-10-14 第一次挪动（14.5→16.2）是**没挪到位的半次**：那次只想到了"别压第三个
+#   车位的划线"，而停车场占地（parking_zones.yaml 的 parking.lot）东缘在 x=16.50，
+#   16.20 的车体包络 15.75..16.65 仍然横穿 PKG-P3（13.377..16.453）—— 车 3 停在 P3
+#   里的时候，环道车正好从它车头东侧 0.25 m 蹭过去。判据补在
+#   tools/route_lot_conflict.py（把两份 yaml 的几何放在同一张图上算，退出码非 0 即冲突）。
+#   2026-10-14 第二次挪动（16.2→20.80）：东侧"贴场走"根本不存在可行走廊 —— 占地东缘
+#   16.50 要求中心 ≥16.50+0.40+0.15=17.05，而 x 17.4..18.6 在停车场 y 带内就是 1.01 m
+#   高的落地构筑物（3d66-VRayMtl 那一排），中间只剩 0.9 m 一条缝，缝上还有两处景观件
+#   （y≈-14.25、y≈-4.25）各截一段。所以整条东腿外移到 x=20.80：
+#     直行包络（半宽 0.60）y -16.80..1.50 全程 0 格落地障碍；
+#     两个角点原地转的扫掠（半宽 1.30，= hypot(1.60,0.80)/2 + 轮轴前移 0.40）东北/东南
+#     角各 0 格；北环 y=1.5 与南环 y=-16.8 向东延长段 x 16.20..20.80 各 0 格
+#     （tools/pk128_newleg238.sh → _diag155/newleg238.log，同一张高度图、同一"落地
+#     h>=0.45"口径，与 route_corridor_scan.py 不互相矛盾）。
+#   东移后 Ring B 周长 ≈ 74.6 m（原 62 m），两环仍是同向、x 区间不重叠。
+#
+#   两条**同为顺时针**的单向环线共享中轴干道与南北环路，天然形成"对向双车道"，
+#   且全图不存在对向交叉，从根本上消除车体互顶导致的物理引擎发散：
+#     Ring A（西环）car_1            —— 北行西侧、东行北环、南行中轴、西行南环
+#     Ring B（东环）car_4 / car_5    —— 北行中轴、东行北环、南行东侧、西行南环
+#   两环在南北环路上共用行车方向（东行 y=1.5、西行 y=-16.8）但 x 区间不重叠，
+#   A 停在 x=-0.8、B 从 x=+1.8 起步，互不占用。
+#   停车场只用 **car_3 一辆**（drive: false，路线原样保留随时可归队），归
+#   parking_shuttle_node 按 parking_zones.yaml 的 fleets.car_3 驱动，出生位也在
+#   停车场入口等待位。car_2 于 2026-10-16 按用户指令归队跑 Ring B —— 理由是停车场
+#   是**单车道**的：入口/出口车道与通道带复位段都是同一条，两个 shuttle 实例各自
+#   自主循环必然在通道带对顶，那不是调度是撞车（见 parking_zones.yaml fleets 那段）。
+#   drive 开关的消费者是 signal_drive_node.py 的装载循环与 tools/place_cars.py 的摆位循环。
+#   ⚠ 覆盖率代价：car_2 下车流后，任务五条目 4 的"临时车登记"分支再没有上场车（停车场
+#   里只剩白名单月租的 car_3）。要演那一支时按**串行窗口**临时换车：停 drive 节点 →
+#   car_2 置 drive: false → SHUTTLE_MODELS=car_2 跑一轮 → 演完立刻归队，别两车同时在线。
+# ==================================================================================
+signal_drive:
+  cars:
+    # ---------------- Ring A 西环（顺时针，周长 ≈ 79 m） ----------------
+    car_1:
+      route: [[-21.8, 1.5], [-0.8, 1.5], [-0.8, -16.8], [-21.8, -16.8]]
+      mode: loop
+      start_idx: 0
+      cruise_speed: 0.85
+      arrive_radius: 1.1
+      wp_timeout: 120.0
+      obey:
+        - {group: J1_ew, x: -11.0, y: 1.5, heading: 0.0, standoff: 2.4, lane_half: 2.4}
+        - {group: J3_ew, x: -2.0, y: 1.5, heading: 0.0, standoff: 2.4, lane_half: 2.4}
+        - {group: J1_ns, x: -0.8, y: -11.0, heading: -1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J2_ns, x: -0.8, y: -16.2, heading: -1.5708, standoff: 1.6, lane_half: 2.4}
+    car_3:
+      drive: false          # 改由 parking_shuttle_node 分队驱动（白名单月租链路）
+      route: [[-21.8, 1.5], [-0.8, 1.5], [-0.8, -16.8], [-21.8, -16.8]]
+      mode: loop
+      start_idx: 2          # 与 car_1 相隔半个环，首尾相接
+      cruise_speed: 0.85
+      arrive_radius: 1.1
+      wp_timeout: 120.0
+      obey:
+        - {group: J1_ew, x: -11.0, y: 1.5, heading: 0.0, standoff: 2.4, lane_half: 2.4}
+        - {group: J3_ew, x: -2.0, y: 1.5, heading: 0.0, standoff: 2.4, lane_half: 2.4}
+        - {group: J1_ns, x: -0.8, y: -11.0, heading: -1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J2_ns, x: -0.8, y: -16.2, heading: -1.5708, standoff: 1.6, lane_half: 2.4}
+
+    # ---------------- Ring B 东环（顺时针，周长 ≈ 74.6 m，东腿 x=20.80 外绕停车场） ----------------
+    car_2:
+      route: [[1.8, -16.8], [1.8, 1.5], [20.8, 1.5], [20.8, -16.8]]
+      mode: loop
+      start_idx: 1
+      cruise_speed: 0.85
+      arrive_radius: 1.1
+      wp_timeout: 120.0
+      obey:
+        - {group: J2_ns, x: 1.8, y: -18.6, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J1_ns, x: 1.8, y: -11.0, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J3_ns, x: 1.8, y: 0.3, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J2_ew, x: 2.5, y: -16.8, heading: 3.14159, standoff: 2.4, lane_half: 2.4}
+    car_4:
+      route: [[1.8, -16.8], [1.8, 1.5], [20.8, 1.5], [20.8, -16.8]]
+      mode: loop
+      start_idx: 3
+      cruise_speed: 0.85
+      arrive_radius: 1.1
+      wp_timeout: 120.0
+      obey:
+        - {group: J2_ns, x: 1.8, y: -18.6, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J1_ns, x: 1.8, y: -11.0, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J3_ns, x: 1.8, y: 0.3, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J2_ew, x: 2.5, y: -16.8, heading: 3.14159, standoff: 2.4, lane_half: 2.4}
+    car_5:
+      route: [[1.8, -16.8], [1.8, 1.5], [20.8, 1.5], [20.8, -16.8]]
+      mode: loop
+      start_idx: 2
+      cruise_speed: 0.85
+      arrive_radius: 1.1
+      wp_timeout: 120.0
+      obey:
+        - {group: J2_ns, x: 1.8, y: -18.6, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J1_ns, x: 1.8, y: -11.0, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J3_ns, x: 1.8, y: 0.3, heading: 1.5708, standoff: 2.4, lane_half: 2.4}
+        - {group: J2_ew, x: 2.5, y: -16.8, heading: 3.14159, standoff: 2.4, lane_half: 2.4}

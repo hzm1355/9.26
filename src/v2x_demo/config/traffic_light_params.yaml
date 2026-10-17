@@ -1,0 +1,74 @@
+# ============================================================================
+# 交通信号灯配时 + 多路口联动参数（协议 §三.(二)）
+#
+# 功能：
+#   1) 机动车灯态：GREEN → YELLOW → RED 循环
+#   2) 行人灯态：WALK → FLASHING → DONT_WALK（与机动车灯联动）
+#   3) 多信号组联动：offset 绿波、complementary 反相
+#   4) 配时预设：default/peak/offpeak/night
+#   5) 时段自动切换：根据实际时间自动选择预设
+#   6) 自适应接口：外部节点发布 adaptive_factor 动态调整
+# ============================================================================
+
+# 默认基准配时（可被 preset 覆盖）
+durations: {green: 10.0, yellow: 3.0, red: 10.0}
+
+# 行人信号配时
+walk_duration: 5.0          # 行人通行时间（秒）
+flashing_duration: 3.0      # 行人闪烁时间（秒）
+
+# 初始预设名
+preset: default
+
+# 配时方案预设（平峰/高峰/夜间）
+presets:
+  default: {green: 10.0, yellow: 3.0, red: 10.0}
+  peak:    {green: 14.0, yellow: 3.0, red: 14.0}   # 高峰：放行更长
+  offpeak: {green: 7.0,  yellow: 3.0, red: 7.0}    # 平峰
+  night:   {green: 5.0,  yellow: 3.0, red: 5.0}    # 夜间小周期
+
+# 时段自动切换（根据实际时间自动选择预设）
+# 格式：start/end 为 HH:MM，preset 为预设名
+time_schedule:
+  enabled: true
+  slots:
+    - {start: "07:00", end: "09:00", preset: peak}       # 早高峰
+    - {start: "09:00", end: "17:00", preset: offpeak}    # 平峰
+    - {start: "17:00", end: "19:00", preset: peak}       # 晚高峰
+    - {start: "19:00", end: "07:00", preset: night}      # 夜间
+
+# 兼容旧字段
+green_duration: 10.0
+yellow_duration: 3.0
+red_duration: 10.0
+state_topic: "traffic_light/state"
+
+# 信号组（多路口联动核心）—— 坐标对齐 v2x_city_scene 沙盘路网
+#   中轴干道 x≈0.5（南北向，两条车道 x=-0.8 南行 / x=+1.8 北行）
+#   北侧环路 y≈1.5（东西向，东行车道 y=1.5）
+#   南侧环路 y≈-16.8（东西向，西行车道 y=-16.8）
+#   offset         —— 相对主时钟的相位差(秒)，用于干线绿波协调
+#   complementary  —— true 时自动取 offset=红时长，与基准组反相（同路口对向放行）
+#   anti_phase_of  —— 指定基准组，offset 自动取"基准组 offset + 基准组绿+黄"，
+#                     切换预设/自适应改变时长后仍严格反相（同路口东西 vs 南北）
+#   green/yellow/red —— 可选，单独覆盖该组时长
+#   stop_x/stop_y  —— 停车线坐标（用于排队车辆检测）
+#   queue_radius   —— 排队检测半径（米）
+#
+#   受控点位（3 个信号控制点，6 个信号相位，全部含机动车灯 + 行人灯）：
+#     J1_ns  中轴干道 y=-11 人行横道（主时钟，offset=0）
+#     J1_ew  北侧环路 x=-11 人行横道（complementary → 与主时钟严格反相）
+#     J2_ns  中轴干道南端 × 南侧环路（offset=6，与 J1 构成 6 s 绿波）
+#     J2_ew  南侧环路西行相位（anti_phase_of J2_ns → 与南北向严格反相）
+#     J3_ns  中轴干道北端 × 北侧环路（offset=3，J1→J3 绿波 3 s）
+#     J3_ew  北侧环路东行相位（anti_phase_of J3_ns → 与南北向严格反相）
+groups:
+  J1_ns: {offset: 0.0,  stop_x: 0.5,  stop_y: -11.0, queue_radius: 6.0}
+  J1_ew: {complementary: true, stop_x: -11.0, stop_y: 1.5, queue_radius: 6.0}
+  J2_ns: {offset: 6.0,  stop_x: 1.8,  stop_y: -14.0, queue_radius: 6.0}
+  J2_ew: {anti_phase_of: J2_ns, stop_x: 2.5, stop_y: -16.8, queue_radius: 6.0}
+  J3_ns: {offset: 3.0,  stop_x: 1.8,  stop_y: 0.3,   queue_radius: 6.0}
+  J3_ew: {anti_phase_of: J3_ns, stop_x: -2.0, stop_y: 1.5, queue_radius: 6.0}
+
+# 兼容话题 traffic_light/state 取该组灯态
+default_group: J1_ns

@@ -1,0 +1,29 @@
+# ETC 记录导出（任务六 §三.(六).5）：把内存里的通行记录、识别事件流、闸机动作日志、
+# 设备状态日志落成四份 CSV，并可归并出一份回放时间轴。
+# 回包把每一份的路径与行数都点名列出 —— 导出成没成、成了几条，必须看得见，
+# 不能只回一句 success（任务五的对账教训：只回 success 时"缺哪一类"根本查不出来）。
+string prefix               # 输出文件名前缀；空串=用 records.dir 下的默认名
+bool only_new               # true=只导上次导出之后的新增行；false=全量
+bool include_replay         # true=同时把四类事件按 sim_ts 归并成回放时间轴
+float64 replay_t0           # 回放窗口下界（仿真秒）；<=0 表示从头
+float64 replay_t1           # 回放窗口上界（仿真秒）；<=0 表示到现在
+---
+bool success
+string message
+string caliber              # 点名本次行数的口径：全量/仅新增、窗口 [t0,t1]、来源 JSONL
+string pass_csv
+string identify_csv
+string action_csv
+string device_csv
+string replay_csv           # include_replay=false 时留空
+int32 pass_rows
+int32 identify_rows
+int32 action_rows
+int32 device_rows
+int32 replay_rows
+string pass_jsonl           # CSV 的上游（追加式 JSONL），对账用
+string identify_jsonl
+string action_jsonl
+string device_jsonl
+string replay_jsonl
+int32 stored                # 内存中当前保留的通行记录总数

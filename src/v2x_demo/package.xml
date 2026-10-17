@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>v2x_demo</name>
+  <version>0.1.0</version>
+  <description>
+    V2X 智能交通虚拟仿真 —— 最小工程骨架（起点代码）。
+    含十字路口 demo world、prius 阿克曼车辆（雷达/IMU/相机）、信号灯配时控制节点，
+    用于验证 Gazebo Classic 11 + ROS 2 Humble + Nav2 + ros2_control 最小闭环。
+  </description>
+  <maintainer email="dev@example.com">V2X Dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <exec_depend>v2x_msgs</exec_depend>
+  <exec_depend>v2x_gazebo_plugins</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-pyqt5</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+
+  <!-- Gazebo Classic 11 + ROS 2 桥接 -->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>gazebo_ros2_control</exec_depend>
+
+  <!-- 导航与控制 -->
+  <exec_depend>ros2_control</exec_depend>
+  <exec_depend>ros2_controllers</exec_depend>
+  <exec_depend>navigation2</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>teleop_twist_keyboard</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <!-- 让 gazebo_ros 自动把本包 models 目录加入 GAZEBO_MODEL_PATH -->
+    <gazebo_ros gazebo_model_path="${prefix}/models"/>
+  </export>
+</package>

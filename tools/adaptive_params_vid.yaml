@@ -1,0 +1,30 @@
+/adaptive_timing_node:
+  ros__parameters:
+    direction_zones: '
+
+      NS_J1: {group: J1_ns, zones: [z_j1_ns], area: {x_min: -3.0, x_max: 3.0, y_min:
+      -10.5, y_max: -7.0}}
+
+      EW_J1: {group: J1_ew, zones: [z_j1_ew], area: {x_min: -16.0, x_max: -11.5, y_min:
+      2.0, y_max: 7.0}}
+
+      NS_J2: {group: J2_ns, zones: [z_j2_ns], area: {x_min: -3.0, x_max: 3.0, y_min:
+      -14.5, y_max: -11.5}}
+
+      EW_J2: {group: J2_ew, zones: [z_j2_ew], area: {x_min: 3.0, x_max: 10.0, y_min:
+      -17.0, y_max: -12.0}}
+
+      NS_J3: {group: J3_ns, zones: [z_j3_ns], area: {x_min: -1.0, x_max: 4.0, y_min:
+      0.0, y_max: 3.0}}
+
+      EW_J3: {group: J3_ew, zones: [z_j3_ew], area: {x_min: -6.0, x_max: -2.5, y_min:
+      2.0, y_max: 7.0}}
+
+      '
+    max_factor: 2.0
+    min_factor: 0.5
+    min_vehicles_for_adapt: 2
+    update_period: 5.0
+    use_sim_time: true
+    wait_weight: 0.3
+

@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="v2x_pedestrian_light">
+    <static>true</static>
+    <pose>0 0 0 0 0 0</pose>
+
+    <link name="link">
+      <!-- 立柱 -->
+      <visual name="pole">
+        <pose>0 0 0.75 0 0 0</pose>
+        <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+        <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+      <collision name="pole_c">
+        <pose>0 0 0.75 0 0 0</pose>
+        <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+      </collision>
+
+      <!-- 灯箱外壳（较小） -->
+      <visual name="housing">
+        <pose>0 0 1.55 0 0 0</pose>
+        <geometry><box><size>0.14 0.20 0.40</size></box></geometry>
+        <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+
+      <!-- 停止信号（红色站立人形）—— 上方 -->
+      <visual name="red_hand">
+        <pose>0.08 0 1.65 0 0 0</pose>
+        <geometry><sphere><radius>0.07</radius></sphere></geometry>
+        <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+      </visual>
+
+      <!-- 行走信号（绿色行走人形）—— 下方 -->
+      <visual name="green_walking">
+        <pose>0.08 0 1.45 0 0 0</pose>
+        <geometry><sphere><radius>0.07</radius></sphere></geometry>
+        <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- ROS 灯态话题驱动灯球 emissive 点亮 -->
+    <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+      <state_topic>pedestrian_light/state</state_topic>
+      <link_name>link</link_name>
+      <is_pedestrian>true</is_pedestrian>
+    </plugin>
+  </model>
+</sdf>

@@ -1,0 +1,25 @@
+# ============================================================================
+# regions.yaml —— 区域触发公共底座的区域定义（region_trigger_node 读取）
+# 坐标与 scene_devices.yaml 一致（world 帧，单位 m）。center 的 z 与 size 的 z
+# 共同构成高度窗口：地面区域取 center z=1.0 / size z=3（覆盖 -0.5~2.5m），
+# 可排除高架（z≈7.4）上行驶的车辆，避免误触发。
+# 新增区域只需追加一项；type 供下游模块按用途订阅过滤：
+#   etc_gate      ETC 门架识别区      parking_gate  停车场出入口闸机区
+#   parking_loop  停车场内地感区      speed_point   测速打点区（进/出时间差=区间测速）
+#   checkpoint    卡口抓拍区          custom        自定义
+# ============================================================================
+regions:
+  # ── ETC 门架识别区（覆盖门架下全幅车道）──
+  - {id: ETC-01_zone, type: etc_gate,     center: [0, -8, 1.0],  size: [14.0, 3.0, 3.0]}
+  - {id: ETC-02_zone, type: etc_gate,     center: [0, 13, 1.0],  size: [14.0, 3.0, 3.0]}
+
+  # ── 停车场 PKG-NW：出入口闸机区 + 场内接地感区 ──
+  - {id: PKG-NW_gate, type: parking_gate, center: [-24, 9, 1.0],  size: [6.0, 2.0, 3.0]}
+  - {id: PKG-NW_loop, type: parking_loop, center: [-24, 12, 1.0], size: [6.0, 3.0, 3.0]}
+
+  # ── 测速路段 NS-main（J2→J1）：A/B 打点区，区间长度 12m ──
+  - {id: SPEED-NS-A,  type: speed_point,  center: [0, -24, 1.0], size: [12.8, 0.5, 3.0]}
+  - {id: SPEED-NS-B,  type: speed_point,  center: [0, -12, 1.0], size: [12.8, 0.5, 3.0]}
+
+  # ── 卡口抓拍区（NS-main 南段，配合前视相机）──
+  - {id: CKPT-NS-01,  type: checkpoint,   center: [0, -16, 1.0], size: [12.8, 1.0, 3.0]}

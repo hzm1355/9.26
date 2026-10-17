@@ -1,0 +1,385 @@
+scene: v2x_city
+frame: world（= odom = 初始 map，单位 m）
+intersections:
+  J1:
+    pose:
+    - 0
+    - 0
+    type: cross
+    label: 主十字路口
+  J2:
+    pose:
+    - 0
+    - -30
+    type: cross
+    label: 学校路口
+  N1:
+    pose:
+    - 0
+    - 30
+    type: endpoint
+    label: 北端点
+  N2:
+    pose:
+    - 0
+    - -40
+    type: endpoint
+    label: 学校前终点
+  E1:
+    pose:
+    - 30
+    - 0
+    type: endpoint
+    label: 东端点
+  W1:
+    pose:
+    - -30
+    - 0
+    type: endpoint
+    label: 西端点
+road_segments:
+  NS-north:
+    from_node: J1
+    to_node: N1
+    length: 30.0
+    lanes_per_dir: 2
+    lane_width: 3.0
+    total_width: 12.8
+    speed_limit: 30
+    label: NS-north
+  NS-main:
+    from_node: J1
+    to_node: J2
+    length: 30.0
+    lanes_per_dir: 2
+    lane_width: 3.0
+    total_width: 12.8
+    speed_limit: 30
+    label: NS-main
+  NS-school:
+    from_node: J2
+    to_node: N2
+    length: 10.0
+    lanes_per_dir: 2
+    lane_width: 3.0
+    total_width: 12.8
+    speed_limit: 20
+    label: NS-school
+  EW-east:
+    from_node: J1
+    to_node: E1
+    length: 30.0
+    lanes_per_dir: 2
+    lane_width: 3.0
+    total_width: 12.8
+    speed_limit: 30
+    label: EW-east
+  EW-west:
+    from_node: J1
+    to_node: W1
+    length: 30.0
+    lanes_per_dir: 2
+    lane_width: 3.0
+    total_width: 12.8
+    speed_limit: 30
+    label: EW-west
+crosswalks:
+- id: CW-J1-NS-north
+  node: J1
+  edge: NS-north
+  center:
+  - 0.0
+  - 9.5
+  stripes: 11
+  label: 主十字路口 NS-north 口人行横道
+- id: CW-J1-NS-main
+  node: J1
+  edge: NS-main
+  center:
+  - 0.0
+  - -9.5
+  stripes: 11
+  label: 主十字路口 NS-main 口人行横道
+- id: CW-J1-EW-east
+  node: J1
+  edge: EW-east
+  center:
+  - 9.5
+  - 0.0
+  stripes: 11
+  label: 主十字路口 EW-east 口人行横道
+- id: CW-J1-EW-west
+  node: J1
+  edge: EW-west
+  center:
+  - -9.5
+  - 0.0
+  stripes: 11
+  label: 主十字路口 EW-west 口人行横道
+- id: CW-J2-NS-main
+  node: J2
+  edge: NS-main
+  center:
+  - 0.0
+  - -20.5
+  stripes: 11
+  label: 学校路口 NS-main 口人行横道
+- id: CW-J2-NS-school
+  node: J2
+  edge: NS-school
+  center:
+  - 0.0
+  - -39.5
+  stripes: 11
+  label: 学校路口 NS-school 口人行横道
+traffic_lights:
+- id: TL-J1-NE
+  pose:
+  - 6.5
+  - 6.5
+  yaw: -1.5708
+  face: J1
+  group: J1_ns
+  state_topic: traffic_light/J1_ns/state
+  label: J1 东北灯
+- id: TL-J1-NW
+  pose:
+  - -6.5
+  - 6.5
+  yaw: 1.5708
+  face: J1
+  group: J1_ew
+  state_topic: traffic_light/J1_ew/state
+  label: J1 西北灯
+- id: TL-J1-SE
+  pose:
+  - 6.5
+  - -6.5
+  yaw: -1.5708
+  face: J1
+  group: J1_ew
+  state_topic: traffic_light/J1_ew/state
+  label: J1 东南灯
+- id: TL-J1-SW
+  pose:
+  - -6.5
+  - -6.5
+  yaw: 1.5708
+  face: J1
+  group: J1_ns
+  state_topic: traffic_light/J1_ns/state
+  label: J1 西南灯
+- id: TL-J2-E
+  pose:
+  - 6.5
+  - -30
+  yaw: -1.5708
+  face: J2
+  group: J2_ns
+  state_topic: traffic_light/J2_ns/state
+  label: J2 东侧灯
+- id: TL-J2-W
+  pose:
+  - -6.5
+  - -30
+  yaw: 1.5708
+  face: J2
+  group: J2_ns
+  state_topic: traffic_light/J2_ns/state
+  label: J2 西侧灯
+etc_gantries:
+- id: ETC-01
+  pose:
+  - 0
+  - -8
+  span: 14.0
+  height: 5.5
+  yaw: 0
+  covered_lanes: 4
+  road: NS-main
+  reader_height: 4.55
+  label: 南段 ETC 门架
+- id: ETC-02
+  pose:
+  - 0
+  - 13
+  span: 14.0
+  height: 5.5
+  yaw: 0
+  covered_lanes: 4
+  road: NS-north
+  reader_height: 4.55
+  label: 北段 ETC 门架
+rsu:
+- id: RSU-J1-NE
+  pose:
+  - 7.5
+  - 7.5
+  height: 4.0
+  antenna_top: 4.38
+  label: J1 东北角 RSU
+- id: RSU-J1-SW
+  pose:
+  - -7.5
+  - -7.5
+  height: 4.0
+  antenna_top: 4.38
+  label: J1 西南角 RSU
+- id: RSU-J2-NW
+  pose:
+  - -7.5
+  - -23
+  height: 4.0
+  antenna_top: 4.38
+  label: J2 西北角 RSU
+parking:
+- id: PKG-NW
+  center:
+  - -24
+  - 17
+  rows: 2
+  stalls_per_row: 6
+  total_stalls: 12
+  gate:
+  - -24
+  - 9.0
+  - 1.05
+  gate_side: south
+  label: 西北地面停车场
+elevated:
+- id: VIADUCT-01
+  z: 7.0
+  width: 8.0
+  length: 20.0
+  path:
+  - - 0
+    - 6
+  - - 0
+    - 26
+  pillars: 3
+  label: 南北主路上跨高架
+landmarks:
+- id: SCHOOL-01
+  uri: model://school
+  pose:
+  - 0
+  - -48
+  z_offset: -4.13
+  yaw: 0
+  label: 学校教学楼
+- id: OFFICE-NW
+  uri: model://office_building
+  pose:
+  - -20
+  - 28
+  z_offset: 0
+  yaw: 0.785
+  label: 办公楼
+- id: TOWER-NE
+  uri: model://law_office
+  pose:
+  - 26
+  - 10
+  z_offset: 0
+  yaw: -0.785
+  label: 写字楼
+anchors:
+- id: building_ne
+  pose:
+  - 18
+  - 18
+  - 3
+  size:
+  - 10
+  - 10
+  - 6
+  label: 东北建筑
+- id: building_sw
+  pose:
+  - -18
+  - -18
+  - 2
+  size:
+  - 8
+  - 8
+  - 4
+  label: 西南建筑
+- id: building_e1
+  pose:
+  - 11
+  - -16
+  - 2
+  size:
+  - 8
+  - 8
+  - 4
+  label: 东侧建筑1
+- id: building_e2
+  pose:
+  - 10
+  - -6
+  - 2.5
+  size:
+  - 7
+  - 7
+  - 5
+  label: 东侧建筑2
+- id: obstacle_1
+  pose:
+  - 3
+  - -12
+  - 0.5
+  size:
+  - 1.8
+  - 4
+  - 1
+  label: 路内抛锚车（避障测试要素）
+intersections_detail:
+- id: J1
+  pose:
+  - 0
+  - 0
+  half_size: 6.4
+  ztop: 0.03
+  label: 主十字路口
+- id: J2
+  pose:
+  - 0
+  - -30
+  half_size: 6.4
+  ztop: 0.03
+  label: 学校路口
+greenery_rows:
+- id: TREES-NS-N
+  along: NS-north
+  interval: 5
+  label: 北段行道树
+- id: TREES-NS-M
+  along: NS-main
+  interval: 5
+  label: 中段行道树
+- id: TREES-NS-S
+  along: NS-school
+  interval: 5
+  label: 学校段行道树
+- id: TREES-EW-W
+  along: EW-west
+  interval: 5
+  label: 西段行道树
+- id: TREES-EW-E
+  along: EW-east
+  interval: 5
+  label: 东段行道树
+scene_camera:
+  id: v2x_scene_cam
+  image_topic: /v2x_scene_cam/cam/image_raw
+  width: 960
+  height: 600
+  default:
+    target:
+    - 0
+    - -4
+    - 1
+    yaw: -60
+    pitch: 22
+    dist: 60

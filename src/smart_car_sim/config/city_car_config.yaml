@@ -1,0 +1,115 @@
+# ============================================================================
+# 城市场景小车配置 —— v2x_city_scene.world
+# ============================================================================
+# car_1 已在 world 文件中内联定义（含 fault_sim 插件），此处仅定义 car_2 / car_3。
+# 沙盘尺寸约 6m × 6.74m，车辆起始位姿需落在道路范围内。
+# 所有单位：米 / 千克 / 弧度 / 秒。
+# ============================================================================
+
+presets:
+  # ---- 中型轿车（默认） ----
+  medium_car:
+    mass: 80.0
+    length: 1.6
+    width: 0.8
+    height: 0.4
+    wheelbase: 1.0
+    wheel_radius: 0.1
+    wheel_width: 0.08
+    wheel_separation: 0.7
+    max_speed: 3.0
+    max_acceleration: 4.0
+    priority: 2
+    color: [0.3, 0.5, 0.8]
+    sensors:
+      lidar:
+        update_rate: 10
+        samples: 360
+        min_range: 0.12
+        max_range: 30.0
+        noise_stddev: 0.01
+      imu:
+        update_rate: 200
+      camera:
+        update_rate: 30
+        hfov: 1.2
+        width: 640
+        height: 480
+        far_clip: 100
+
+  # ---- 小型配送机器人 ----
+  delivery_bot:
+    mass: 30.0
+    length: 0.8
+    width: 0.6
+    height: 0.35
+    wheelbase: 0.5
+    wheel_radius: 0.06
+    wheel_width: 0.05
+    wheel_separation: 0.5
+    max_speed: 1.5
+    max_acceleration: 2.0
+    priority: 1
+    color: [0.2, 0.7, 0.3]
+    sensors:
+      lidar:
+        update_rate: 10
+        samples: 360
+        min_range: 0.08
+        max_range: 15.0
+        noise_stddev: 0.008
+      imu:
+        update_rate: 200
+      camera:
+        update_rate: 15
+        hfov: 1.0
+        width: 320
+        height: 240
+        far_clip: 50
+
+  # ---- 高速巡逻车 ----
+  patrol_car:
+    mass: 60.0
+    length: 1.4
+    width: 0.7
+    height: 0.35
+    wheelbase: 0.9
+    wheel_radius: 0.09
+    wheel_width: 0.07
+    wheel_separation: 0.6
+    max_speed: 5.0
+    max_acceleration: 6.0
+    priority: 4
+    color: [0.9, 0.15, 0.15]
+    sensors:
+      lidar:
+        update_rate: 20
+        samples: 360
+        min_range: 0.1
+        max_range: 40.0
+        noise_stddev: 0.005
+      imu:
+        update_rate: 400
+      camera:
+        update_rate: 30
+        hfov: 1.0
+        width: 640
+        height: 480
+        far_clip: 150
+
+# ============================================================================
+# 实例车辆 —— 城市场景道路上的初始位姿
+# start: [x, y, yaw]  世界坐标，z 由 spawner 固定为 0.15
+# ============================================================================
+cars:
+  - name: car_2
+    type: medium_car
+    start: [1.5, 0.5, 1.5708]
+    color: [0.15, 0.65, 0.35]
+    max_speed: 1.5
+
+  - name: car_3
+    type: delivery_bot
+    start: [-1.5, 0.5, -1.5708]
+    color: [0.85, 0.55, 0.1]
+    max_speed: 1.0

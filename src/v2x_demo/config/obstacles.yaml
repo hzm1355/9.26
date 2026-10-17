@@ -1,0 +1,223 @@
+# 由 tools/gen_obstacle_config.py 从 v2x_city_scene.world 自动生成，勿手改。
+# rect = [x0, y0, x1, y1]（世界系外接矩形 footprint），lane_dist 仅便于人读。
+obstacles:
+- name: tl_j2_ns/pole_collision
+  rect:
+  - 4.07
+  - -13.33
+  - 4.33
+  - -13.07
+  lane_dist: 1.4
+  z:
+  - 6.85
+  - 10.95
+- name: tl_j1_ew/pole_collision
+  rect:
+  - -10.33
+  - 6.27
+  - -10.07
+  - 6.53
+  lane_dist: 1.8
+  z:
+  - 6.85
+  - 10.95
+- name: tl_j1_ns_ped/pole_collision
+  rect:
+  - 5.7
+  - -12.7
+  - 5.9
+  - -12.5
+  lane_dist: 2.0
+  z:
+  - 6.75
+  - 9.55
+- name: tl_j3_ns/pole_collision
+  rect:
+  - 4.07
+  - 6.47
+  - 4.33
+  - 6.73
+  lane_dist: 2.0
+  z:
+  - 6.85
+  - 10.95
+- name: tl_j3_ns_ped/pole_collision
+  rect:
+  - 5.7
+  - 2.5
+  - 5.9
+  - 2.7
+  lane_dist: 2.0
+  z:
+  - 6.75
+  - 9.55
+- name: tl_j2_ew_ped/pole_collision
+  rect:
+  - -3.5
+  - -12.5
+  - -3.3
+  - -12.3
+  lane_dist: 2.2
+  z:
+  - 6.75
+  - 9.55
+- name: tl_j1_ns/pole_collision
+  rect:
+  - 4.07
+  - -10.33
+  - 4.33
+  - -10.07
+  lane_dist: 2.4
+  z:
+  - 6.85
+  - 10.95
+- name: tl_j3_ew/pole_collision
+  rect:
+  - -1.13
+  - 6.87
+  - -0.87
+  - 7.13
+  lane_dist: 2.4
+  z:
+  - 6.85
+  - 10.95
+- name: tl_j2_ew/pole_collision
+  rect:
+  - -1.63
+  - -17.13
+  - -1.37
+  - -16.87
+  lane_dist: 2.4
+  z:
+  - 6.85
+  - 10.95
+- name: parking_gantry/mast2_col
+  rect:
+  - 14.26
+  - -7.14
+  - 14.44
+  - -6.96
+  lane_dist: 2.45
+  z:
+  - 6.7
+  - 9.35
+- name: tl_j1_ew_ped/pole_collision
+  rect:
+  - -12.9
+  - 7.3
+  - -12.7
+  - 7.5
+  lane_dist: 2.8
+  z:
+  - 6.75
+  - 9.55
+- name: parking_booth/body_col
+  rect:
+  - 10.5
+  - -11.8
+  - 11.5
+  - -10.8
+  lane_dist: 3.3
+  z:
+  - 6.7
+  - 8.9
+- name: gate_j3_north/mast_collision
+  rect:
+  - -7.09
+  - 7.91
+  - -6.91
+  - 8.09
+  lane_dist: 3.4
+  z:
+  - 6.7
+  - 10.3
+- name: gate_j2_south/mast_collision
+  rect:
+  - 14.743
+  - -18.09
+  - 14.923
+  - -17.91
+  lane_dist: 3.4
+  z:
+  - 6.7
+  - 10.3
+- name: tl_j3_ew_ped/pole_collision
+  rect:
+  - -4.7
+  - 8.1
+  - -4.5
+  - 8.3
+  lane_dist: 3.6
+  z:
+  - 6.75
+  - 9.55
+- name: tl_j2_ns_ped/pole_collision
+  rect:
+  - 5.7
+  - -18.7
+  - 5.9
+  - -18.5
+  lane_dist: 4.0
+  z:
+  - 6.75
+  - 9.55
+- name: parking_gantry/mast1_col
+  rect:
+  - 7.56
+  - -7.14
+  - 7.74
+  - -6.96
+  lane_dist: 5.85
+  z:
+  - 6.7
+  - 9.35
+- name: intersection_cam/pole_collision
+  rect:
+  - 19.915
+  - -20.085
+  - 20.085
+  - -19.915
+  lane_dist: 6.28
+  z:
+  - 6.7
+  - 14.7
+- name: speed_cam/pole_collision
+  rect:
+  - -0.05
+  - -23.05
+  - 0.05
+  - -22.95
+  lane_dist: 8.44
+  z:
+  - 6.7
+  - 12.7
+- name: bldg_tower_w/c
+  rect:
+  - -7.5
+  - 10.5
+  - -0.5
+  - 17.5
+  lane_dist: 9.4
+  z:
+  - 6.7
+  - 14.7
+- name: bldg_tower_e/c
+  rect:
+  - 5.5
+  - 10.5
+  - 12.5
+  - 17.5
+  lane_dist: 9.4
+  z:
+  - 6.7
+  - 14.7
+- name: monitor_cam/pole_collision
+  rect:
+  - -20.071
+  - 19.929
+  - -19.929
+  - 20.071
+  lane_dist: 15.41
+  z:
+  - 6.7
+  - 14.7

@@ -1,0 +1,585 @@
+<?xml version="1.0" ?>
+<!-- ============================================================================
+  traffic_arena —— 含十字路口信号灯的仿真场地
+  包含：十字路口、机动车信号灯、行人信号灯、斑马线、车道标线
+  用于验证信号灯配时、自适应控制、急救车优先等功能。
+============================================================================ -->
+<sdf version="1.6">
+  <world name="traffic_arena">
+
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.8 0.95 1</background>
+      <shadows>1</shadows>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+
+    <!-- ==================== 地面 ==================== -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <surface><friction><ode><mu>100</mu><mu2>50</mu2></ode></friction></surface>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.35 0.55 0.30 1</ambient>
+            <diffuse>0.40 0.60 0.35 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 道路（沥青色） ==================== -->
+    <!-- 南北向道路 -->
+    <model name="road_ns">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.005 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>8.0 60.0 0.01</size></box></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 东西向道路 -->
+    <model name="road_ew">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.005 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>60.0 8.0 0.01</size></box></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 路口区域（稍宽） ==================== -->
+    <model name="intersection_area">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.006 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>10.0 10.0 0.01</size></box></geometry>
+          <material><ambient>0.12 0.12 0.12 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 车道标线 ==================== -->
+    <!-- 中央双黄线（南北向） -->
+    <model name="center_line_ns">
+      <static>true</static>
+      <link name="link">
+        <pose>0 15 0.008 0 0 0</pose>
+        <visual name="v1">
+          <geometry><box><size>0.15 20.0 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>1.0 0.9 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="center_line_ns_south">
+      <static>true</static>
+      <link name="link">
+        <pose>0 -15 0.008 0 0 0</pose>
+        <visual name="v1">
+          <geometry><box><size>0.15 20.0 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>1.0 0.9 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 中央双黄线（东西向） -->
+    <model name="center_line_ew_east">
+      <static>true</static>
+      <link name="link">
+        <pose>15 0 0.008 0 0 0</pose>
+        <visual name="v1">
+          <geometry><box><size>20.0 0.15 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>1.0 0.9 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="center_line_ew_west">
+      <static>true</static>
+      <link name="link">
+        <pose>-15 0 0.008 0 0 0</pose>
+        <visual name="v1">
+          <geometry><box><size>20.0 0.15 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>1.0 0.9 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 斑马线 ==================== -->
+    <!-- 北侧斑马线 -->
+    <model name="crosswalk_north">
+      <static>true</static>
+      <link name="link">
+        <pose>0 6.5 0.009 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>8.0 2.5 0.005</size></box></geometry>
+          <material>
+            <ambient>0.92 0.92 0.92 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 南侧斑马线 -->
+    <model name="crosswalk_south">
+      <static>true</static>
+      <link name="link">
+        <pose>0 -6.5 0.009 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>8.0 2.5 0.005</size></box></geometry>
+          <material>
+            <ambient>0.92 0.92 0.92 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 东侧斑马线 -->
+    <model name="crosswalk_east">
+      <static>true</static>
+      <link name="link">
+        <pose>6.5 0 0.009 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>2.5 8.0 0.005</size></box></geometry>
+          <material>
+            <ambient>0.92 0.92 0.92 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 西侧斑马线 -->
+    <model name="crosswalk_west">
+      <static>true</static>
+      <link name="link">
+        <pose>-6.5 0 0.009 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>2.5 8.0 0.005</size></box></geometry>
+          <material>
+            <ambient>0.92 0.92 0.92 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 停止线 ==================== -->
+    <model name="stop_line_north">
+      <static>true</static>
+      <link name="link">
+        <pose>2.0 5.0 0.008 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>4.0 0.3 0.005</size></box></geometry>
+          <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="stop_line_south">
+      <static>true</static>
+      <link name="link">
+        <pose>-2.0 -5.0 0.008 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>4.0 0.3 0.005</size></box></geometry>
+          <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="stop_line_east">
+      <static>true</static>
+      <link name="link">
+        <pose>5.0 -2.0 0.008 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>0.3 4.0 0.005</size></box></geometry>
+          <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="stop_line_west">
+      <static>true</static>
+      <link name="link">
+        <pose>-5.0 2.0 0.008 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>0.3 4.0 0.005</size></box></geometry>
+          <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 机动车信号灯 ==================== -->
+    <!-- 东北角信号灯（面向南，控制南北向） -->
+    <model name="TL_J1_NE">
+      <static>true</static>
+      <pose>6.0 6.0 0 0 0 -1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 2.5 0 0 0</pose>
+          <geometry><box><size>0.18 0.30 0.90</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red">
+          <pose>0.10 0 2.78 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="yellow">
+          <pose>0.10 0 2.50 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0.36 0 1</ambient><diffuse>0.5 0.4 0 1</diffuse></material>
+        </visual>
+        <visual name="green">
+          <pose>0.10 0 2.22 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ns/state</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>false</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 西北角信号灯（面向东，控制东西向） -->
+    <model name="TL_J1_NW">
+      <static>true</static>
+      <pose>-6.0 6.0 0 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 2.5 0 0 0</pose>
+          <geometry><box><size>0.18 0.30 0.90</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red">
+          <pose>0.10 0 2.78 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="yellow">
+          <pose>0.10 0 2.50 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0.36 0 1</ambient><diffuse>0.5 0.4 0 1</diffuse></material>
+        </visual>
+        <visual name="green">
+          <pose>0.10 0 2.22 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ew/state</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>false</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 东南角信号灯 -->
+    <model name="TL_J1_SE">
+      <static>true</static>
+      <pose>6.0 -6.0 0 0 0 -1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 2.5 0 0 0</pose>
+          <geometry><box><size>0.18 0.30 0.90</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red">
+          <pose>0.10 0 2.78 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="yellow">
+          <pose>0.10 0 2.50 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0.36 0 1</ambient><diffuse>0.5 0.4 0 1</diffuse></material>
+        </visual>
+        <visual name="green">
+          <pose>0.10 0 2.22 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ew/state</state_topic>
+        <link_name>link</link>
+        <is_pedestrian>false</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 西南角信号灯 -->
+    <model name="TL_J1_SW">
+      <static>true</static>
+      <pose>-6.0 -6.0 0 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 1.2 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>2.4</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 2.5 0 0 0</pose>
+          <geometry><box><size>0.18 0.30 0.90</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red">
+          <pose>0.10 0 2.78 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="yellow">
+          <pose>0.10 0 2.50 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0.45 0.36 0 1</ambient><diffuse>0.5 0.4 0 1</diffuse></material>
+        </visual>
+        <visual name="green">
+          <pose>0.10 0 2.22 0 0 0</pose>
+          <geometry><sphere><radius>0.09</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ns/state</state_topic>
+        <link_name>link</link>
+        <is_pedestrian>false</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- ==================== 行人信号灯 ==================== -->
+    <!-- 北侧行人灯 -->
+    <model name="PED_N">
+      <static>true</static>
+      <pose>4.5 5.5 0 0 0 3.14159</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 1.55 0 0 0</pose>
+          <geometry><box><size>0.14 0.20 0.40</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0.08 0 1.65 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0.08 0 1.45 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ns/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 南侧行人灯 -->
+    <model name="PED_S">
+      <static>true</static>
+      <pose>-4.5 -5.5 0 0 0 0</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 1.55 0 0 0</pose>
+          <geometry><box><size>0.14 0.20 0.40</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0.08 0 1.65 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0.08 0 1.45 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ns/pedestrian</state_topic>
+        <link_name>link</link>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 东侧行人灯 -->
+    <model name="PED_E">
+      <static>true</static>
+      <pose>5.5 -4.5 0 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 1.55 0 0 0</pose>
+          <geometry><box><size>0.14 0.20 0.40</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0.08 0 1.65 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0.08 0 1.45 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ew/pedestrian</state_topic>
+        <link_name>link</link>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- 西侧行人灯 -->
+    <model name="PED_W">
+      <static>true</static>
+      <pose>-5.5 4.5 0 0 0 -1.5708</pose>
+      <link name="link">
+        <visual name="pole">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+        <collision name="pole_c">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>1.5</length></cylinder></geometry>
+        </collision>
+        <visual name="housing">
+          <pose>0 0 1.55 0 0 0</pose>
+          <geometry><box><size>0.14 0.20 0.40</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0.08 0 1.65 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0.45 0 0 1</ambient><diffuse>0.5 0 0 1</diffuse><emissive>0.9 0.05 0.05 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0.08 0 1.45 0 0 0</pose>
+          <geometry><sphere><radius>0.07</radius></sphere></geometry>
+          <material><ambient>0 0.45 0 1</ambient><diffuse>0 0.5 0 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin name="v2x_traffic_light" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ew/pedestrian</state_topic>
+        <link_name>link</link>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- ==================== 路侧障碍物（建筑） ==================== -->
+    <model name="building_ne">
+      <static>true</static>
+      <link name="link">
+        <pose>18 18 3 0 0 0</pose>
+        <collision name="c"><geometry><box><size>10 10 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>10 10 6</size></box></geometry>
+          <material><ambient>0.6 0.5 0.4 1</ambient><diffuse>0.7 0.6 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_sw">
+      <static>true</static>
+      <link name="link">
+        <pose>-18 -18 2 0 0 0</pose>
+        <collision name="c"><geometry><box><size>8 8 4</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>8 8 4</size></box></geometry>
+          <material><ambient>0.5 0.4 0.3 1</ambient><diffuse>0.6 0.5 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

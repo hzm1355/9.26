@@ -1,0 +1,112 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="surveillance_camera">
+    <static>true</static>
+
+    <!-- 立杆 -->
+    <link name="pole">
+      <collision name="pole_collision">
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>2.5</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <min_depth>0.001</min_depth>
+              <kp>1e8</kp>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <visual name="pole_visual">
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>2.5</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.3 0.3 0.3 1</ambient>
+          <diffuse>0.4 0.4 0.4 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+    </link>
+
+    <!-- 摄像头外壳 -->
+    <link name="camera_box">
+      <pose>0 0 2.5 0 0 0</pose>
+
+      <collision name="camera_collision">
+        <pose>0 0.15 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.25 0.18 0.15</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="camera_visual">
+        <pose>0 0.15 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.25 0.18 0.15</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.3 0.3 0.3 1</specular>
+        </material>
+      </visual>
+
+      <!-- 摄像头传感器 -->
+      <sensor name="surveillance_camera_sensor" type="camera">
+        <pose>0 0.15 0 0 -0.2 0</pose>
+        <always_on>true</always_on>
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+        <camera name="surveillance_cam">
+          <horizontal_fov>1.2</horizontal_fov>
+          <image>
+            <width>800</width>
+            <height>600</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/surveillance_cam</namespace>
+            <remapping>~/image_raw:=camera/image_raw</remapping>
+            <remapping>~/camera_info:=camera/camera_info</remapping>
+          </ros>
+          <camera_name>surveillance_cam</camera_name>
+          <frame_name>surveillance_camera/camera_link</frame_name>
+        </plugin>
+      </sensor>
+    </link>
+
+    <!-- 连接立杆和摄像头 -->
+    <joint name="pole_camera_joint" type="fixed">
+      <parent>pole</parent>
+      <child>camera_box</child>
+      <pose>0 0 2.5 0 0 0</pose>
+    </joint>
+  </model>
+</sdf>

@@ -1,0 +1,20 @@
+# 白名单/临时车维护（协议 §三.(五).4）：热改名单不必重启，改完立刻影响下一次核验。
+# YAML（parking_zones.yaml 的 control.whitelist）是基线，OP_RESET 回到基线。
+uint8 OP_LIST=0
+uint8 OP_ADD=1              # 新增或就地覆盖条目（plate_numbers + kinds + labels）
+uint8 OP_REMOVE=2           # 按车牌删除
+uint8 OP_RESET=3            # 清掉运行期改动，回到 YAML 基线
+uint8 OP_ISSUE_TEMP=4       # 临时车登记：发一张临时卡，返回 ticket_id
+uint8 OP_REVOKE_TEMP=5      # 收回临时卡（出场时核销也算，节点会自动做）
+uint8 op
+
+string[] plate_numbers      # OP_RESET 时忽略
+uint8[] kinds               # 与 plate_numbers 一一对应：取 ParkingPass 的 KIND_MONTHLY/KIND_TEMP
+string[] labels             # 可短于名单；OP_ISSUE_TEMP 时是"来访事由"之类的备注
+---
+bool success
+string message
+string[] whitelist          # 变更后的完整名单（含临时卡）
+uint8[] whitelist_kinds
+string[] whitelist_labels
+string[] tickets            # 当前在途的临时卡号，形如 T-<发卡时刻>

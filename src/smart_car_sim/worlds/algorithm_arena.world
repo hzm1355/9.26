@@ -1,0 +1,273 @@
+<?xml version="1.0" ?>
+<!-- ============================================================================
+  algorithm_arena —— 智能小车算法仿真专用场地
+  开放式场地，含障碍物、通道、环形跑道，用于导航算法验证。
+  元素：地面 / 边界墙 / 障碍物(箱/柱) / 通道 / 环形路径标记
+============================================================================ -->
+<sdf version="1.6">
+  <world name="algorithm_arena">
+
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.8 0.95 1</background>
+      <shadows>1</shadows>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 地面 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <surface><friction><ode><mu>100</mu><mu2>50</mu2></ode></friction></surface>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.45 0.45 0.42 1</ambient>
+            <diffuse>0.5 0.5 0.47 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 全局位姿发布（供轨迹记录/区域触发使用） -->
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+
+    <!-- ==================== 边界墙 ==================== -->
+    <!-- 北墙 -->
+    <model name="wall_north">
+      <static>true</static>
+      <link name="link">
+        <pose>0 25 0.5 0 0 0</pose>
+        <collision name="c"><geometry><box><size>50 0.3 1.0</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 0.3 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- 南墙 -->
+    <model name="wall_south">
+      <static>true</static>
+      <link name="link">
+        <pose>0 -25 0.5 0 0 0</pose>
+        <collision name="c"><geometry><box><size>50 0.3 1.0</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 0.3 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- 东墙 -->
+    <model name="wall_east">
+      <static>true</static>
+      <link name="link">
+        <pose>25 0 0.5 0 0 1.5708</pose>
+        <collision name="c"><geometry><box><size>50 0.3 1.0</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 0.3 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- 西墙 -->
+    <model name="wall_west">
+      <static>true</static>
+      <link name="link">
+        <pose>-25 0 0.5 0 0 1.5708</pose>
+        <collision name="c"><geometry><box><size>50 0.3 1.0</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 0.3 1.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 障碍物区域 ==================== -->
+    <!-- 中央障碍物群 -->
+    <model name="obstacle_box_1">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.4 0 0 0</pose>
+        <collision name="c"><geometry><box><size>2.0 2.0 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>2.0 2.0 0.8</size></box></geometry>
+          <material><ambient>0.8 0.3 0.1 1</ambient><diffuse>0.9 0.4 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_cylinder_1">
+      <static>true</static>
+      <link name="link">
+        <pose>5 5 0.5 0 0 0</pose>
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry>
+          <material><ambient>0.2 0.5 0.8 1</ambient><diffuse>0.3 0.6 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_cylinder_2">
+      <static>true</static>
+      <link name="link">
+        <pose>-5 5 0.5 0 0 0</pose>
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry>
+          <material><ambient>0.2 0.5 0.8 1</ambient><diffuse>0.3 0.6 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_cylinder_3">
+      <static>true</static>
+      <link name="link">
+        <pose>5 -5 0.5 0 0 0</pose>
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry>
+          <material><ambient>0.2 0.5 0.8 1</ambient><diffuse>0.3 0.6 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_cylinder_4">
+      <static>true</static>
+      <link name="link">
+        <pose>-5 -5 0.5 0 0 0</pose>
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>1.0</length></cylinder></geometry>
+          <material><ambient>0.2 0.5 0.8 1</ambient><diffuse>0.3 0.6 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- L形通道墙 -->
+    <model name="wall_L_h">
+      <static>true</static>
+      <link name="link">
+        <pose>10 10 0.4 0 0 0</pose>
+        <collision name="c"><geometry><box><size>8.0 0.3 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>8.0 0.3 0.8</size></box></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_L_v">
+      <static>true</static>
+      <link name="link">
+        <pose>14 14 0.4 0 0 1.5708</pose>
+        <collision name="c"><geometry><box><size>8.0 0.3 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>8.0 0.3 0.8</size></box></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- S形通道墙 -->
+    <model name="wall_S_1">
+      <static>true</static>
+      <link name="link">
+        <pose>-10 -10 0.4 0 0 0</pose>
+        <collision name="c"><geometry><box><size>6.0 0.3 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.0 0.3 0.8</size></box></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_S_2">
+      <static>true</static>
+      <link name="link">
+        <pose>-13 -13 0.4 0 0 0</pose>
+        <collision name="c"><geometry><box><size>6.0 0.3 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.0 0.3 0.8</size></box></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 地面标记（视觉参考） ==================== -->
+    <!-- 中心标记 -->
+    <model name="center_mark">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.01 0 0 0</pose>
+        <visual name="v">
+          <geometry><cylinder><radius>0.5</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.9 0.9 0.0 1</ambient><diffuse>1.0 1.0 0.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 四角标记 -->
+    <model name="corner_mark_NE">
+      <static>true</static>
+      <link name="link">
+        <pose>20 20 0.01 0 0 0</pose>
+        <visual name="v">
+          <geometry><cylinder><radius>0.3</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.0 0.8 0.0 1</ambient><diffuse>0.0 1.0 0.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_mark_NW">
+      <static>true</static>
+      <link name="link">
+        <pose>-20 20 0.01 0 0 0</pose>
+        <visual name="v">
+          <geometry><cylinder><radius>0.3</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.0 0.0 0.8 1</ambient><diffuse>0.0 0.0 1.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_mark_SE">
+      <static>true</static>
+      <link name="link">
+        <pose>20 -20 0.01 0 0 0</pose>
+        <visual name="v">
+          <geometry><cylinder><radius>0.3</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.8 0.8 0.0 1</ambient><diffuse>1.0 1.0 0.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="corner_mark_SW">
+      <static>true</static>
+      <link name="link">
+        <pose>-20 -20 0.01 0 0 0</pose>
+        <visual name="v">
+          <geometry><cylinder><radius>0.3</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.8 0.0 0.0 1</ambient><diffuse>1.0 0.0 0.0 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

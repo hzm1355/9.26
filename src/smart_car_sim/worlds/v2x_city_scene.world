@@ -1,0 +1,3417 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="v2x_city_scene">
+    <!-- 物理引擎 -->
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step>0.001</max_step>
+      <real_time_factor>1</real_time_factor>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>150</iters>
+          <precon_iters>0</precon_iters>
+          <sor>1.400000</sor>
+          <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
+        </solver>
+        <constraints>
+          <cfm>0.00001</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>2000.0</contact_max_correcting_vel>
+          <contact_surface_layer>0.01000</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+
+    <!-- 场景 -->
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- GUI 相机初始位置（俯视整个 50m 城市） -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>0 -70 50 0 0.57 1.5708</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
+    <!-- 太阳光 -->
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- 地面（深色沥青） -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.08 0.08 0.08 1</diffuse>
+            <specular>0.0 0.0 0.0 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 房间模型 ==================== -->
+    <!-- 房间 OBJ 均为 Y-up（Blender 导出），Gazebo 为 Z-up，
+         故每个房间绕 X 轴 +90°(roll=1.5708) 才能平躺在地面 -->
+
+    <!-- 33平米房间（实际为城市沙盘，5m 桌面尺寸，放大 10 倍成 50m 城市） -->
+    <model name="room_33">
+      <static>true</static>
+      <pose>0 0 6.7 1.5708 0 0</pose>
+      <link name="link">
+        <!-- OBJ 三角形过多导致 ODE 三角网格碰撞失效，改用等效盒体：顶面=路面 z=6.7 -->
+        <collision name="collision">
+          <pose>0 -3.35 -0.5 0 0 0</pose>
+          <geometry>
+            <box><size>50 6.7 51.2</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>model://room_33/meshes/room_33.obj</uri>
+              <scale>10 10 10</scale>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 建筑群隐形碰撞盒（供 LiDAR/避障使用，视觉由沙盘网格提供）
+         尺寸按沙盘实际楼块轮廓收紧，保证各条车道中心距盒面 >=1.5 m，避免车辆顶墙卡死 -->
+    <model name="bldg_school">
+      <static>true</static>
+      <!-- 轮廓按 tools/bldg_box_fit.py 对到网格实影（学校楼体实测 x -13.75..-3.50、
+           y -12.75..-5.00，四边各留 0.3 m）。旧盒往北多画到 y=1.0，正好压在北侧
+           新车道 y=1.5 的车体走廊上，会把车拦住 —— 那里网格根本没有墙。 -->
+      <pose>-8.62 -8.88 9.2 0 0 0</pose>
+      <link name="link"><collision name="c"><geometry><box><size>10.85 8.35 5</size></box></geometry></collision></link>
+    </model>
+    <model name="bldg_nw">
+      <static>true</static>
+      <pose>-13.5 12.5 9.7 0 0 0</pose>
+      <link name="link"><collision name="c"><geometry><box><size>9 9 6</size></box></geometry></collision></link>
+    </model>
+    <model name="bldg_tower_w">
+      <static>true</static>
+      <pose>-4 14 10.7 0 0 0</pose>
+      <link name="link"><collision name="c"><geometry><box><size>7 7 8</size></box></geometry></collision></link>
+    </model>
+    <model name="bldg_tower_e">
+      <static>true</static>
+      <pose>9 14 10.7 0 0 0</pose>
+      <link name="link"><collision name="c"><geometry><box><size>7 7 8</size></box></geometry></collision></link>
+    </model>
+    <model name="bldg_ne">
+      <static>true</static>
+      <pose>17 13.2 9.7 0 0 0</pose>
+      <link name="link"><collision name="c"><geometry><box><size>9 9 6</size></box></geometry></collision></link>
+    </model>
+
+    <!-- 20平米房间（ meshes 为重复沙盘，暂不加载） -->
+    <!--
+    <model name="room_20">
+      <static>true</static>
+      <pose>15 0 0 1.5708 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>model://room_20/meshes/room_20.obj</uri>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>model://room_20/meshes/room_20.obj</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+    -->
+
+    <!-- 12平米房间（meshes 缺失，暂不加载） -->
+    <!--
+    <model name="room_12">
+      <static>true</static>
+      <pose>30 0 0 1.5708 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>model://room_12/meshes/room_12.obj</uri>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>model://room_12/meshes/room_12.obj</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+    -->
+
+    <!-- ==================== 智能小车 car_1（南侧环路上） ==================== -->
+    <model name="car_1">
+      <pose>-21.8 -5.0 7.0 0 0 1.5708</pose>
+
+      <!-- 底盘 -->
+      <link name="chassis">
+        <inertial>
+          <mass>80.0</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <inertia>
+            <ixx>2.13</ixx><ixy>0</ixy><iyy>17.07</iyy>
+            <ixz>0</ixz><iyz>0</iyz><izz>17.07</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="chassis_collision">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+        </collision>
+
+        <visual name="chassis_body">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+          <material>
+            <ambient>0.1 0.4 0.8 1</ambient>
+            <diffuse>0.1 0.4 0.8 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 驾驶舱 -->
+        <!-- 车牌面片：占位材质由 plate_gen_node 渲染，运行时由 v2x_plate 插件 SetMaterial 替换 -->
+        <visual name="plate_rear">
+          <pose>-0.81 0 0.15 0 0 3.14159265358979</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.81 0 0.15 0 0 0</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.08 0.57 0 0 0</pose>
+          <geometry><box><size>0.72 0.68 0.24</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 前视相机 -->
+        <sensor name="camera" type="camera">
+          <pose>0.6 0 0.75 0 0.15 0</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <visualize>true</visualize>
+          <camera name="front_camera">
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/car_1</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>camera</camera_name>
+            <frame_name>car_1/camera_link</frame_name>
+          </plugin>
+        </sensor>
+
+        <!-- LiDAR -->
+        <sensor name="lidar" type="ray">
+          <pose>0.16 0 0.55 0 0 0</pose>
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>true</visualize>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>360</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.14159</min_angle>
+                <max_angle>3.14159</max_angle>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.12</min>
+              <max>30.0</max>
+              <resolution>0.01</resolution>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </ray>
+          <plugin name="gazebo_ros_ray_sensor" filename="libgazebo_ros_ray_sensor.so">
+            <ros>
+              <namespace>/car_1</namespace>
+              <remapping>~/out:=scan</remapping>
+            </ros>
+            <output_type>sensor_msgs/LaserScan</output_type>
+            <frame_name>car_1/lidar_link</frame_name>
+          </plugin>
+        </sensor>
+
+        <!-- IMU -->
+        <sensor name="imu_sensor" type="imu">
+          <pose>0 0 0.20 0 0 0</pose>
+          <always_on>true</always_on>
+          <update_rate>200</update_rate>
+          <plugin name="gazebo_ros_imu_sensor" filename="libgazebo_ros_imu_sensor.so">
+            <ros>
+              <namespace>/car_1</namespace>
+              <remapping>~/out:=imu/data</remapping>
+            </ros>
+            <frame_name>car_1/imu_link</frame_name>
+            <initial_orientation_as_reference>false</initial_orientation_as_reference>
+          </plugin>
+        </sensor>
+      </link>
+
+      <!-- 左轮 -->
+      <link name="left_wheel_link">
+        <pose>0.40 0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry>
+            <cylinder><radius>0.10</radius><length>0.08</length></cylinder>
+          </geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry>
+            <cylinder><radius>0.10</radius><length>0.08</length></cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz>
+          <dynamics><friction>0.1</friction></dynamics>
+        </axis>
+      </joint>
+
+      <!-- 右轮 -->
+      <link name="right_wheel_link">
+        <pose>0.40 -0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry>
+            <cylinder><radius>0.10</radius><length>0.08</length></cylinder>
+          </geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry>
+            <cylinder><radius>0.10</radius><length>0.08</length></cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz>
+          <dynamics><friction>0.1</friction></dynamics>
+        </axis>
+      </joint>
+
+      <!-- 后脚轮 -->
+      <link name="caster_link">
+        <pose>-0.40 0 0.06 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <!-- 差速驱动插件 -->
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_1</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.70</wheel_separation>
+        <wheel_diameter>0.20</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <!-- 40 会让轮速指令瞬间生效，急转时整车甩尾打滑；限到 6 平滑扭矩 -->
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>true</publish_odom_tf>
+        <publish_wheel_tf>true</publish_wheel_tf>
+        <odometry_frame>car_1_odom</odometry_frame>
+        <robot_base_frame>car_1/base_link</robot_base_frame>
+      </plugin>
+
+      <!-- 故障模拟插件 -->
+      <plugin name="v2x_fault_sim" filename="libv2x_fault_sim.so">
+        <ros>
+          <namespace>/car_1</namespace>
+        </ros>
+        <enabled>false</enabled>
+        <fault_type>NONE</fault_type>
+        <drift_rate>0.01</drift_rate>
+        <lag_seconds>0.5</lag_seconds>
+        <sensor_drop_rate>0.3</sensor_drop_rate>
+      </plugin>
+    </model>
+
+    <!-- ==================== car_2：排队演示车辆 ====================
+         复用 car_1 的底盘/轮系/差速驱动参数（含 max_wheel_acceleration=6 防甩尾），
+         不带传感器，仅用于多车排队与"等待车辆数量"统计演示。 -->
+    <model name="car_2">
+      <!-- 2026-10-14 出生位从 Ring B 北行车道 (1.8,-5.0) 挪到停车场入口以南的场外
+           排队位：任务五用它演"白名单外→临时车登记"那条分支，由
+           parking_shuttle_node 按 parking_zones.yaml 的 shuttle.fleets.car_2 驱动。
+           y=-14.60 夹在两条约束中间：离入口相机 focus (12.00,-11.21) 3.39 m，必须
+           越过 far_radius 2.5 抓拍才重新武装；又必须与南环西行车道 y=-16.8 的车体
+           （-17.2..-16.4）留净空，此处留 1.80 m。
+           2026-10-16 搬回 (1.8,-5.0)：car_2 当天按用户指令归队跑 Ring B（它不再由
+           parking_shuttle_node 驱动，那一格只剩"占着"的作用），而 car_3 的等待位
+           同批写进了它的出生位 (12.00,-13.95) —— 两格只差 0.65 m、同向朝北、车长
+           1.60 m，车体在 x 上完全重叠、y 上互穿 0.95 m，gzserver 一加载就把两台一起
+           弹开：car_3 甩到 (15.71,-44.06) 掉出台面落到 z≈0，car_2 甩到 (20.81,-16.64)。
+           现场读起来像"重启把车崩飞了"，其实是出生格互穿，而手工摆位永远测不到它
+           （摆位时另一台早开走了）。这条现在由 tools/pk188_worldprechk316.py 第 5 段
+           当场拦住：任意两台的出生格车体必须不相交（含 0.10 m 余量）。
+           回到 Ring B 中轴北行那一腿既在车流路线上（起栈后 place_cars.py 会接手摆位），
+           又与同环另一台 car_4 (20.8,-5.0) 差 19 m，不与任何车互穿。 -->
+      <pose>1.8000 -5.0000 7.0000 0 0 1.5708</pose>
+
+      <link name="chassis">
+        <inertial>
+          <mass>80.0</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <inertia>
+            <ixx>2.13</ixx><ixy>0</ixy><iyy>17.07</iyy>
+            <ixz>0</ixz><iyz>0</iyz><izz>17.07</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="chassis_collision">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+        </collision>
+
+        <visual name="chassis_body">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+          <material>
+            <ambient>0.15 0.6 0.25 1</ambient>
+            <diffuse>0.15 0.6 0.25 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 车牌面片：占位材质由 plate_gen_node 渲染，运行时由 v2x_plate 插件 SetMaterial 替换 -->
+        <visual name="plate_rear">
+          <pose>-0.81 0 0.15 0 0 3.14159265358979</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.81 0 0.15 0 0 0</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.08 0.57 0 0 0</pose>
+          <geometry><box><size>0.72 0.68 0.24</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="left_wheel_link">
+        <pose>0.40 0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="right_wheel_link">
+        <pose>0.40 -0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="caster_link">
+        <pose>-0.40 0 0.06 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_2</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.70</wheel_separation>
+        <wheel_diameter>0.20</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>false</publish_odom_tf>
+        <publish_wheel_tf>false</publish_wheel_tf>
+        <odometry_frame>car_2_odom</odometry_frame>
+        <robot_base_frame>car_2/base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- ===== 新增车辆 car_3/car_4/car_5（由 car_2 模板复制，差速驱动 + 独立命名空间） ===== -->
+    <model name="car_3">
+      <!-- 2026-10-14 出生位从 Ring A 南行车道 (-0.8,-5.0) 挪到停车场入口等待位：
+           任务五用它演"白名单月租车"那条分支，由 parking_shuttle_node 按
+           parking_zones.yaml 的 shuttle.fleets.car_3 驱动。这一格与 car_6 的出生位
+           同一套标定（等待位在入口闸杆轴以南 1.75 m、离相机 focus 1.59 m，
+           在 near_radius 1.4 之外，所以第一脚油门到核验位的抓拍上升沿成立）。
+           2026-10-16 随 fleets.car_3 等待位一起南移到 (12.00,-13.95)：1.59 m 那个
+           旧值离 gate_in 的 far_radius 2.5 太近，reset 末段原地转会把底盘原点甩进
+           near_radius 1.4 误拍一帧并永久置 armed（第二轮零抓拍的成因）。南移后静止
+           离 focus 2.74 m > far 2.5，每轮回等待位自动清锁；z 仍 7.0000 自由落体到
+           台面 6.70，该格落地障碍高度图 0 格（tools/lot_clearance.py）。 -->
+      <pose>12.0000 -13.9500 7.0000 0 0 1.5708</pose>
+
+      <link name="chassis">
+        <inertial>
+          <mass>80.0</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <inertia>
+            <ixx>2.13</ixx><ixy>0</ixy><iyy>17.07</iyy>
+            <ixz>0</ixz><iyz>0</iyz><izz>17.07</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="chassis_collision">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+        </collision>
+
+        <visual name="chassis_body">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+          <material>
+            <ambient>0.85 0.45 0.10 1</ambient>
+            <diffuse>0.85 0.45 0.10 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 车牌面片：占位材质由 plate_gen_node 渲染，运行时由 v2x_plate 插件 SetMaterial 替换 -->
+        <visual name="plate_rear">
+          <pose>-0.81 0 0.15 0 0 3.14159265358979</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.81 0 0.15 0 0 0</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.08 0.57 0 0 0</pose>
+          <geometry><box><size>0.72 0.68 0.24</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="left_wheel_link">
+        <pose>0.40 0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="right_wheel_link">
+        <pose>0.40 -0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="caster_link">
+        <pose>-0.40 0 0.06 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_3</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.70</wheel_separation>
+        <wheel_diameter>0.20</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>false</publish_odom_tf>
+        <publish_wheel_tf>false</publish_wheel_tf>
+        <odometry_frame>car_3_odom</odometry_frame>
+        <robot_base_frame>car_3/base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <model name="car_4">
+      <!-- 2026-10-14 第二次挪动：东腿整条外绕到 x=20.80，出生位跟着挪。
+           上一次挪到 16.20 是"没让开"的半次 —— 停车场占地东缘 x1=16.50，16.20 的
+           车体包络 15.75..16.65 仍然横穿第三个原始车位 PKG-P3（13.377..16.453），
+           而 P3 现在是 car_3 的泊位。判据 tools/route_lot_conflict.py（两份 yaml 的
+           几何同图相交，退出码 0 才算不经过停车场），净空实测
+           tools/pk128_newleg238.sh → _diag155/newleg238.log：东腿中心线半宽 0.60 全程
+           0 格落地障碍，两个角点原地转扫掠（半宽 1.30）与北/南环向东延长段各 0 格。
+           这里必须与 route 一起改，否则 arrive_radius 1.1 会让 car_4 从旧位斜穿停车场
+           去追新航点。 -->
+      <pose>20.8 -5.0 7.0 0 0 -1.5708</pose>
+
+      <link name="chassis">
+        <inertial>
+          <mass>80.0</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <inertia>
+            <ixx>2.13</ixx><ixy>0</ixy><iyy>17.07</iyy>
+            <ixz>0</ixz><iyz>0</iyz><izz>17.07</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="chassis_collision">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+        </collision>
+
+        <visual name="chassis_body">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+          <material>
+            <ambient>0.15 0.35 0.85 1</ambient>
+            <diffuse>0.15 0.35 0.85 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 车牌面片：占位材质由 plate_gen_node 渲染，运行时由 v2x_plate 插件 SetMaterial 替换 -->
+        <visual name="plate_rear">
+          <pose>-0.81 0 0.15 0 0 3.14159265358979</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.81 0 0.15 0 0 0</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.08 0.57 0 0 0</pose>
+          <geometry><box><size>0.72 0.68 0.24</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="left_wheel_link">
+        <pose>0.40 0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="right_wheel_link">
+        <pose>0.40 -0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="caster_link">
+        <pose>-0.40 0 0.06 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_4</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.70</wheel_separation>
+        <wheel_diameter>0.20</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>false</publish_odom_tf>
+        <publish_wheel_tf>false</publish_wheel_tf>
+        <odometry_frame>car_4_odom</odometry_frame>
+        <robot_base_frame>car_4/base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <model name="car_5">
+      <pose>8.15 1.5 7.0 0 0 0.0</pose>
+
+      <link name="chassis">
+        <inertial>
+          <mass>80.0</mass>
+          <pose>0 0 0 0 0 0</pose>
+          <inertia>
+            <ixx>2.13</ixx><ixy>0</ixy><iyy>17.07</iyy>
+            <ixz>0</ixz><iyz>0</iyz><izz>17.07</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="chassis_collision">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+        </collision>
+
+        <visual name="chassis_body">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>1.6 0.8 0.4</size></box></geometry>
+          <material>
+            <ambient>0.70 0.15 0.25 1</ambient>
+            <diffuse>0.70 0.15 0.25 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 车牌面片：占位材质由 plate_gen_node 渲染，运行时由 v2x_plate 插件 SetMaterial 替换 -->
+        <visual name="plate_rear">
+          <pose>-0.81 0 0.15 0 0 3.14159265358979</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.81 0 0.15 0 0 0</pose>
+          <geometry><box><size>0.02 0.44 0.14</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.08 0.57 0 0 0</pose>
+          <geometry><box><size>0.72 0.68 0.24</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+      </link>
+
+      <link name="left_wheel_link">
+        <pose>0.40 0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="right_wheel_link">
+        <pose>0.40 -0.35 0.10 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5707963 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>0.08</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="caster_link">
+        <pose>-0.40 0 0.06 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.06</radius></sphere></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_5</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.70</wheel_separation>
+        <wheel_diameter>0.20</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>false</publish_odom_tf>
+        <publish_wheel_tf>false</publish_wheel_tf>
+        <odometry_frame>car_5_odom</odometry_frame>
+        <robot_base_frame>car_5/base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- ==================== 测速摄像头 speed_cam（南侧环路上方） ==================== -->
+    <model name="speed_cam">
+      <static>true</static>
+      <pose>0 -23 12.7 0 0 0</pose>
+      <link name="link">
+        <!-- 立杆 -->
+        <visual name="pole">
+          <pose>0 0 -3 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>6.0</length></cylinder></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 -3 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>6.0</length></cylinder></geometry>
+        </collision>
+
+        <!-- 摄像头外壳 -->
+        <visual name="camera_box">
+          <pose>0 0.3 0 0 0 0</pose>
+          <geometry><box><size>0.3 0.2 0.15</size></box></geometry>
+          <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+
+        <!-- 摄像头传感器 -->
+        <sensor name="speed_camera_sensor" type="camera">
+          <pose>0 0.3 0 0 0.5 0</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <visualize>true</visualize>
+          <camera name="speed_cam">
+            <horizontal_fov>1.0</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/speed_cam</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>speed_cam</camera_name>
+            <frame_name>speed_cam/camera_link</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
+    <!-- ==================== 路口摄像头 intersection_cam（东南角俯视中心路口） ==================== -->
+    <model name="intersection_cam">
+      <static>true</static>
+      <pose>20 -20 14.7 0 0 2.356</pose>
+      <link name="link">
+        <!-- 立杆 -->
+        <visual name="pole">
+          <pose>0 0 -4 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>8.0</length></cylinder></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 -4 0 0 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>8.0</length></cylinder></geometry>
+        </collision>
+
+        <!-- 横臂 -->
+        <visual name="arm">
+          <pose>1.5 0 0 0 0 0</pose>
+          <geometry><box><size>3.0 0.08 0.08</size></box></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+
+        <!-- 摄像头外壳 -->
+        <visual name="camera_box">
+          <pose>2.8 0 0.2 0 0 0</pose>
+          <geometry><box><size>0.25 0.18 0.15</size></box></geometry>
+          <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+
+        <!-- 摄像头传感器 -->
+        <sensor name="intersection_camera_sensor" type="camera">
+          <pose>2.8 0 0.2 0 0.45 0</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <visualize>true</visualize>
+          <camera name="intersection_cam">
+            <horizontal_fov>1.4</horizontal_fov>
+            <image>
+              <width>800</width>
+              <height>600</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>150</far>
+            </clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/intersection_cam</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>intersection_cam</camera_name>
+            <frame_name>intersection_cam/camera_link</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
+    <!-- ==================== 监控摄像头 monitor_cam（西北角俯视） ==================== -->
+    <model name="monitor_cam">
+      <static>true</static>
+      <pose>-20 20 14.7 0 0 -0.785</pose>
+      <link name="link">
+        <!-- 立杆 -->
+        <visual name="pole">
+          <pose>0 0 -4 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>8.0</length></cylinder></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 -4 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>8.0</length></cylinder></geometry>
+        </collision>
+
+        <!-- 摄像头外壳 -->
+        <visual name="camera_box">
+          <pose>0 0.3 0 0 0 0</pose>
+          <geometry><box><size>0.25 0.18 0.15</size></box></geometry>
+          <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+        </visual>
+
+        <!-- 摄像头传感器 -->
+        <sensor name="monitor_camera_sensor" type="camera">
+          <pose>0 0.3 0 0 0.5 0</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <visualize>true</visualize>
+          <camera name="monitor_cam">
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/monitor_cam</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>monitor_cam</camera_name>
+            <frame_name>monitor_cam/camera_link</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
+    <!-- ==================== 信号灯（协议 §三.(二) 信号灯配时仿真） ====================
+         路口：J1 中心 (0,-5)（NS 路 x=0 与 EW 路 y=-5 相交），J2 中心 (0,-17)
+         停车线：J1_ns 北向 y=-11 / J1_ew 东向 x=-11 / J2_ns 北向 y=-14
+
+         灯型设计（柱式 + 短横臂，灯箱朝向来车方向）：
+           pole_link  = 底座 + 立杆 + 横臂 + 灯箱外壳 + 三块遮光罩（不参与点灯）
+           red_link / yellow_link / green_link = 灯球，visual 名 red_visual 等，
+             这是 libtraffic_light_plugin.so 依赖的命名（model::red_link::red_visual），
+             改造型时不能改这些名字。
+           模型局部坐标系：灯面朝向 -Y，横臂沿 -X 伸出；用 <pose> 的 yaw 转到实际朝向。
+
+         行人灯：libv2x_traffic_light.so（is_pedestrian），visual 名 red_hand / green_walking
+         灯态话题由 traffic_light_manager 发布：traffic_light/<组>/state 与 /pedestrian -->
+    <model name="tl_j1_ns">
+      <static>true</static>
+      <pose>4.2 -10.2 6.7 0 0 0</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J1_ns/state</topic>
+      </plugin>
+    </model>
+
+    <model name="tl_j1_ew">
+      <static>true</static>
+      <!-- yaw=-90°：灯面转向 -X（东向来车），横臂沿 +Y 伸到东行车道上方 -->
+      <pose>-10.2 6.4 6.7 0 0 -1.5708</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J1_ew/state</topic>
+      </plugin>
+    </model>
+
+    <model name="tl_j2_ns">
+      <static>true</static>
+      <pose>4.2 -13.2 6.7 0 0 0</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J2_ns/state</topic>
+      </plugin>
+    </model>
+
+    <!-- 行人信号灯：灯箱式头部（外壳 + 红手/绿行两灯），面朝横穿行人 -->
+    <model name="tl_j1_ns_ped">
+      <static>true</static>
+      <!-- 2026-10-13 从 (5.8,-12.6) 挪到 (3.6,-8.0)：原位的 pole_collision（r=0.10）
+           贴着停车场南口袋的复位转点 (6.80,-12.80)，原地转扫掠半径 1.365 m 根本转不开，
+           car_6 两次楔在上面（实测 OBB 重叠 -0.041/-0.040 m）。新位离最近行车道
+           （x=1.8 纵向线）1.8 m，不碰车队航线，也不碰停车场任何航点的扫掠圆。 -->
+      <pose>3.6 -8.0 6.7 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ns/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <model name="tl_j1_ew_ped">
+      <static>true</static>
+      <!-- 位于 J1 西口人行横道北侧，yaw=0 使灯面朝向 -Y（北侧等待的行人） -->
+      <pose>-12.8 7.4 6.7 0 0 0</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J1_ew/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <model name="tl_j2_ns_ped">
+      <static>true</static>
+      <!-- J2 南口人行横道东侧，灯面朝 +X -->
+      <pose>5.8 -18.6 6.7 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J2_ns/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- J3 北路口（中轴干道 × 北侧环路）机动车灯，灯面朝 -Y 拦北向来车 -->
+    <model name="tl_j3_ns">
+      <static>true</static>
+      <pose>4.2 6.6 6.7 0 0 0</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J3_ns/state</topic>
+      </plugin>
+    </model>
+
+    <!-- J3 北路口南侧人行横道行人灯 -->
+    <model name="tl_j3_ns_ped">
+      <static>true</static>
+      <!-- 北侧新车道在 y=1.5，灯杆原来落在 (5.8, 2.6) 只离走廊 0.5 m，一抖就撞；
+           往北路缘挪 1.0 m，与车体走廊留 1.5 m 间隙。 -->
+      <pose>5.8 3.6 6.7 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J3_ns/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- J3 北路口 E-W 相位机动车灯，灯面朝 -X 拦东向来车 -->
+    <model name="tl_j3_ew">
+      <static>true</static>
+      <pose>-1.0 7.0 6.7 0 0 -1.5708</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J3_ew/state</topic>
+      </plugin>
+    </model>
+
+    <!-- J3 北路口西口人行横道行人灯 -->
+    <model name="tl_j3_ew_ped">
+      <static>true</static>
+      <pose>-4.6 8.2 6.7 0 0 0</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J3_ew/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+    <!-- J2 南路口 E-W 相位机动车灯，灯面朝 +X 拦西向来车 -->
+    <model name="tl_j2_ew">
+      <static>true</static>
+      <!-- 南侧车道从 y=-14.6 挪到 y=-16.8 后，原立杆 (-1.5,-17.0) 正好站在车道中央。
+           按原相对关系整体北移：立杆退到北路缘 (-2.6,-15.3)，横臂 1.45 m 向西伸出，
+           灯壳落到 (-2.6,-16.75) 悬在西行车道上方，朝向仍为 +X（面向东向来车）。
+           x 从 -1.5 让到 -2.6 是为了避开中间南行车道 x=-0.8 的车体走廊（间隙 1.3 m）。 -->
+      <pose>-2.6 -15.3 6.7 0 0 1.5708</pose>
+      <link name="pole_link">
+        <visual name="base_visual">
+          <pose>0 0 0.09 0 0 0</pose>
+          <geometry><cylinder><radius>0.30</radius><length>0.18</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>4.10</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="arm_visual">
+          <pose>-0.75 0 4.05 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.06</radius><length>1.60</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>-1.45 0.02 4.05 0 0 0</pose>
+          <geometry><box><size>0.62 0.24 1.70</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_visor">
+          <pose>-1.45 -0.15 3.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="yellow_visor">
+          <pose>-1.45 -0.15 4.20 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <visual name="green_visor">
+          <pose>-1.45 -0.15 4.70 0.38 0 0</pose>
+          <geometry><box><size>0.56 0.30 0.05</size></box></geometry>
+          <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 2.20 0 0 0</pose>
+          <geometry><cylinder><radius>0.13</radius><length>4.10</length></cylinder></geometry>
+        </collision>
+      </link>
+      <link name="red_link">
+        <pose>-1.45 -0.13 3.55 0 0 0</pose>
+        <visual name="red_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="yellow_link">
+        <pose>-1.45 -0.13 4.05 0 0 0</pose>
+        <visual name="yellow_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.05 0.05 0 1</ambient><diffuse>0.05 0.05 0 1</diffuse><emissive>0.05 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <link name="green_link">
+        <pose>-1.45 -0.13 4.55 0 0 0</pose>
+        <visual name="green_visual">
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin name="traffic_light" filename="libtraffic_light_plugin.so">
+        <topic>traffic_light/J2_ew/state</topic>
+      </plugin>
+    </model>
+
+    <!-- J2 南路口西口人行横道行人灯 -->
+    <model name="tl_j2_ew_ped">
+      <static>true</static>
+      <pose>-3.4 -12.4 6.7 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="base_visual">
+          <pose>0 0 0.07 0 0 0</pose>
+          <geometry><cylinder><radius>0.22</radius><length>0.14</length></cylinder></geometry>
+          <material><ambient>0.10 0.10 0.10 1</ambient><diffuse>0.18 0.18 0.18 1</diffuse></material>
+        </visual>
+        <visual name="pole_visual">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.075</radius><length>2.80</length></cylinder></geometry>
+          <material><ambient>0.16 0.16 0.16 1</ambient><diffuse>0.30 0.30 0.32 1</diffuse></material>
+        </visual>
+        <visual name="housing_visual">
+          <pose>0 0.02 2.75 0 0 0</pose>
+          <geometry><box><size>0.50 0.20 1.15</size></box></geometry>
+          <material><ambient>0.04 0.04 0.04 1</ambient><diffuse>0.09 0.09 0.09 1</diffuse></material>
+        </visual>
+        <visual name="red_hand">
+          <pose>0 -0.11 2.45 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0.05 0 0 1</ambient><diffuse>0.05 0 0 1</diffuse><emissive>0.05 0 0 1</emissive></material>
+        </visual>
+        <visual name="green_walking">
+          <pose>0 -0.11 3.05 0 0 0</pose>
+          <geometry><sphere><radius>0.13</radius></sphere></geometry>
+          <material><ambient>0 0.05 0 1</ambient><diffuse>0 0.05 0 1</diffuse><emissive>0 0.05 0 1</emissive></material>
+        </visual>
+        <collision name="pole_collision">
+          <pose>0 0 1.45 0 0 0</pose>
+          <geometry><cylinder><radius>0.10</radius><length>2.80</length></cylinder></geometry>
+        </collision>
+      </link>
+      <plugin name="traffic_light_ped" filename="libv2x_traffic_light.so">
+        <state_topic>traffic_light/J2_ew/pedestrian</state_topic>
+        <link_name>link</link_name>
+        <is_pedestrian>true</is_pedestrian>
+      </plugin>
+    </model>
+
+
+    <!-- ==================== 任务三（三）道路卡口：龙门架 + 帧精确抓拍 ====================
+         两处卡口都是"路面外立杆 + 横臂把相机伸到车道中心线正上方 2.5 m"的电子警察形态，
+         相机沿车流方向朝下俯拍，拍的是**车尾牌**（车辆驶离相机，车牌面正对镜头）：
+           gate_j3_north —— 北环 y=4.6 东行车道，相机朝东（yaw=0），覆盖 Ring A 北直段
+           gate_j2_south —— 南环 y=-14.6 西行车道，相机朝西（yaw=3.14159），覆盖 Ring B 南直段
+
+         相机几何是反推出来的，不是随手填的，改任何一个数都要重算：
+           相机世界高度 z=9.2，车牌面中心 z=6.85 → 落差 2.35 m；
+           俯角 pitch=0.55 rad → 光轴落在车前方 2.35/tan(0.55)=3.833 m 处；
+           抓拍距离 = sqrt(2.35^2+3.833^2) = 4.50 m；
+           horizontal_fov=0.6 @ 1920 宽 -> 焦距 f = 960/tan(0.3) = 3103 px；
+           31.5 度入射角只压缩车牌**高度**（车牌法线水平、视线在竖直面内下倾），
+           所以 440x140 mm 的蓝牌在画面里约 303x82 px，按国标 45x90 mm 的字符格排七个字，
+           每格只落到约 31x59 px——识别器把校正图画布定在 440x140（1 px/mm）就是为了
+           不再往下采样，够参考识别器格内匹配。
+
+         抓拍点 = 光轴与车牌平面的交点，相机沿视线方向前移 3.833 m：
+           北环 (-3.167, 4.6, 6.85)   南环 (11.000, -14.6, 6.85)
+
+         抓拍点的 x 不是随便挑的，得躲开沙盘里的地面装置。南环最初定在抓拍点 4.997，
+         实机抓到的整帧是一块停车场诱导牌加道闸，车牌根本不在画面里。于是把
+         room_33 网格换算到世界系（模型 pose roll=90°、mesh scale 10，即
+         wx=10*x、wy=-10*z、wz=10*y+6.7），统计"车道中心 ±2 m、路面以上 0.2~2.8 m"
+         这条走廊里的顶点数：x 5.5~7.0 稠密（72824 个，就是那块牌子），
+         x 7.5~12.5 完全净空，x 16.5~17.0 又稠密（东直段路口构筑物）。
+         取抓拍点 11.0 / 相机 14.833，两头都落在净空段内。
+
+         但 <focus> **不等于**抓拍点。v2x_gate 量的是"底盘 link 原点的**画面时刻**位置
+         到 focus 的水平距离"，在**接近**侧首次进入 near_radius 的上升沿就抓拍，
+         于是有两段固定偏置要补回去：
+           1) 触发时车还没到 focus，差一个 near_radius = 1.00 m；
+           2) 车尾牌挂在底盘原点后面 0.81 m（plate_rear 的 local x），也就是**更靠近镜头**
+              0.81 m，牌比link先到抓拍点。
+         所以 focus 要沿车流方向再往前 1.00 + 0.81 = 1.81 m：
+           北环 focus x = -3.167 + 1.81 = -1.357（车向东）
+           南环 focus x = 11.000 - 1.81 =  9.190（车向西）
+         这一段是实测校准出来的：改之前 focus 直接填抓拍点，gate_geom_check.py 量到
+         车牌实际只在镜头前 2.02 m（应为 3.83 m），整块牌掉在画面下沿之外。
+         far_radius 只要大于 near_radius、又不越过相邻车道（避免邻环车辆反复装填）即可。
+
+         渲染滞后由插件补，不再往 focus 里塞。相机是渲染线程按 update_rate 异步出帧的，
+         tools/cam_rate.py 实测 ImageData() 里那帧平均比仿真钟旧 1.1 s。0.7 m/s 时
+         这只有 0.77 m，落在取景余量里；2.8 m/s 时同一个滞后是 3.1 m，牌面直接掉出画面。
+         所以 v2x_gate 现在按 p_frame = p_now − v·Δt（Δt 取 LastRenderTime 的实际值，
+         取不到才退回 <render_lag>）来判触发并回填位姿，focus 保持上面这套 0.7 m/s 标定值。
+
+         立杆件的一条硬规矩：横臂和机壳必须整体退到**镜头平面之后**（北环 local -X、
+         南环 local +X，因为南环相机 yaw=180°）。v2 首版把横臂做成与相机同高且前伸
+         6 cm，结果 0.06 m 处那片面占满整个画面，抓拍到 82% 是自家立杆。 -->
+    <model name="gate_j3_north">
+      <static>true</static>
+      <!-- 北侧车道 y=4.6 → y=1.5，整套卡口随车道南移 3.1 m（立杆、横臂、机壳、相机、
+           focus 的相对几何一字不变，标定继续有效） -->
+      <pose>-7.0 4.9 6.7 0 0 0</pose>
+      <link name="link">
+        <visual name="mast">
+          <pose>0 0 1.8 0 0 0</pose>
+          <geometry><cylinder><radius>0.09</radius><length>3.6</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.5 1</diffuse></material>
+        </visual>
+        <visual name="base">
+          <pose>0 0 0.08 0 0 0</pose>
+          <geometry><cylinder><radius>0.28</radius><length>0.16</length></cylinder></geometry>
+          <material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.22 0.22 0.25 1</diffuse></material>
+        </visual>
+        <visual name="arm">
+          <pose>-0.28 -1.7 2.62 0 0 0</pose>
+          <geometry><box><size>0.10 3.4 0.10</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.5 1</diffuse></material>
+        </visual>
+        <visual name="camera_box">
+          <pose>-0.22 -3.4 2.56 0 0 0</pose>
+          <geometry><box><size>0.30 0.20 0.16</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material>
+        </visual>
+        <collision name="mast_collision">
+          <pose>0 0 1.8 0 0 0</pose>
+          <geometry><cylinder><radius>0.09</radius><length>3.6</length></cylinder></geometry>
+        </collision>
+
+        <sensor name="gate_camera" type="camera">
+          <pose>0 -3.4 2.5 0 0.55 0</pose>
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <camera name="gate_cam">
+            <horizontal_fov>0.6</horizontal_fov>
+            <image>
+              <width>1920</width>
+              <height>1080</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip><near>0.05</near><far>40</far></clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/gate_j3_north</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>gate_cam</camera_name>
+            <frame_name>gate_j3_north/camera_link</frame_name>
+          </plugin>
+          <plugin name="v2x_gate" filename="libv2x_gate.so">
+            <gate_id>gate_j3_north</gate_id>
+            <capture_dir>/tmp/v2x_gates</capture_dir>
+            <focus>-1.357 1.5 6.85</focus>
+            <near_radius>1.0</near_radius>
+            <far_radius>4.0</far_radius>
+            <render_lag>0.0</render_lag>
+            <vehicle_prefix>car_</vehicle_prefix>
+            <chassis_link>chassis</chassis_link>
+            <image_format>R8G8B8</image_format>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
+    <model name="gate_j2_south">
+      <static>true</static>
+      <!-- 南侧车道 y=-14.6 → y=-16.8，整套卡口随车道南移 2.2 m：相机镜头中心落到新车道
+           正上方，立杆从东车道 x=14.5 的走廊里让到东南路缘（与两条走廊各留 ~1 m）。
+           横臂/机壳/focus 的相对几何一字不变，任务三那套标定继续有效。 -->
+      <pose>14.833 -20.2 6.7 0 0 0</pose>
+      <link name="link">
+        <visual name="mast">
+          <pose>0 0 1.8 0 0 0</pose>
+          <geometry><cylinder><radius>0.09</radius><length>3.6</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.5 1</diffuse></material>
+        </visual>
+        <visual name="base">
+          <pose>0 0 0.08 0 0 0</pose>
+          <geometry><cylinder><radius>0.28</radius><length>0.16</length></cylinder></geometry>
+          <material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.22 0.22 0.25 1</diffuse></material>
+        </visual>
+        <visual name="arm">
+          <!-- 南环相机 yaw=180°，link 系的 -X 才是镜头前方，所以横臂/机壳要放在 +X 侧 -->
+          <pose>0.28 1.7 2.62 0 0 0</pose>
+          <geometry><box><size>0.10 3.4 0.10</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.5 1</diffuse></material>
+        </visual>
+        <visual name="camera_box">
+          <pose>0.22 3.4 2.56 0 0 0</pose>
+          <geometry><box><size>0.30 0.20 0.16</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material>
+        </visual>
+        <collision name="mast_collision">
+          <pose>0 0 1.8 0 0 0</pose>
+          <geometry><cylinder><radius>0.09</radius><length>3.6</length></cylinder></geometry>
+        </collision>
+
+        <sensor name="gate_camera" type="camera">
+          <pose>0 3.4 2.5 0 0.55 3.14159265</pose>
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <camera name="gate_cam">
+            <horizontal_fov>0.6</horizontal_fov>
+            <image>
+              <width>1920</width>
+              <height>1080</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip><near>0.05</near><far>40</far></clip>
+          </camera>
+          <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/gate_j2_south</namespace>
+              <remapping>~/image_raw:=camera/image_raw</remapping>
+              <remapping>~/camera_info:=camera/camera_info</remapping>
+            </ros>
+            <camera_name>gate_cam</camera_name>
+            <frame_name>gate_j2_south/camera_link</frame_name>
+          </plugin>
+          <plugin name="v2x_gate" filename="libv2x_gate.so">
+            <gate_id>gate_j2_south</gate_id>
+            <capture_dir>/tmp/v2x_gates</capture_dir>
+            <focus>9.19 -16.8 6.85</focus>
+            <near_radius>1.0</near_radius>
+            <far_radius>4.0</far_radius>
+            <render_lag>0.0</render_lag>
+            <vehicle_prefix>car_</vehicle_prefix>
+            <chassis_link>chassis</chassis_link>
+            <image_format>R8G8B8</image_format>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
+    <!-- 车牌贴牌管理器：任务三（三）。承载 v2x_plate 插件，
+         订阅 /plate/set 给五辆车换车牌材质。本体埋在地下，不参与交通。 -->
+    <model name="plate_manager">
+      <static>true</static>
+      <pose>0 0 -0.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.02 0.02 0.02</size></box></geometry>
+          <material>
+            <ambient>0 0 0 1</ambient>
+            <diffuse>0 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <plugin name="v2x_plate" filename="libv2x_plate.so">
+        <set_topic>/plate/set</set_topic>
+        <plate_dir>/tmp/v2x_plates</plate_dir>
+        <chassis_link>chassis</chassis_link>
+      </plugin>
+    </model>
+
+    <!-- ==================== 任务三（三）条目 3：卡口补光灯 + 光照预设 ====================
+         电子警察晚上是真带补光灯的，所以夜间预设不是"把画面调黑"而是"关掉太阳、只留补光"。
+         灯型选 point 而不是 spot：spot 的光轴在本体系是 -Z，要靠姿态或 <direction>
+         转过来，而实测这两条在 Gazebo 11 里哪条被采纳没有保证（spot 版夜间档南环整幅
+         最亮只有 17，说明光轴压根没指到取景中心）。point 各向同性，摆位对了就亮。
+
+         位置就在各自相机旁边（北 -7.22 4.6 9.26 / 南 15.05 -14.6 9.26，跟 camera_box
+         的世界坐标重合）：真实卡口的频闪灯就装在相机两侧，到牌面的距离由抓拍点决定，
+         北环 (-3.167,4.6) / 南环 (11.0,-14.6)、牌面中心 z≈0.55 → 约 9.6 m。
+
+         衰减参数是被实测逼出来的：quadratic 0.02 时 9.6 m 处只剩 1/(1+0.02·92)≈0.35，
+         开关灯量不出差别；把灯临时挪到牌面上方 3 m 才第一次看到可重复的差异
+         （南环最亮 6→16、灰度级 1→3），而把 fill_diffuse 从 1.8 提到 30 并不更亮——
+         这版 Gazebo 的灯亮度在 1 附近就被夹住了，靠加亮度补不回距离。
+         所以改成放松衰减：quadratic 0.002 + range 60 → 9.6 m 处衰减 0.84。
+
+         <diffuse> 初值给 0：插件的 <default>是 none，启动时不改任何灯，
+         初值 0 才能保证白天基线里这两盏灯是真灭的，不被它们污染。 -->
+    <light name="gate_j3_north_fill" type="point">
+      <pose>-7.22 4.6 9.26 0 0 0</pose>
+      <diffuse>0 0 0 1</diffuse>
+      <specular>0 0 0 1</specular>
+      <attenuation>
+        <range>60</range><constant>1</constant><linear>0</linear><quadratic>0.002</quadratic>
+      </attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+
+    <light name="gate_j2_south_fill" type="point">
+      <pose>15.05 -14.6 9.26 0 0 0</pose>
+      <diffuse>0 0 0 1</diffuse>
+      <specular>0 0 0 1</specular>
+      <attenuation>
+        <range>60</range><constant>1</constant><linear>0</linear><quadratic>0.002</quadratic>
+      </attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+
+    <!-- 光照预设切换：订阅 ROS2 /gate/lighting（day/backlit/lowlight/night）。
+         default=none 表示启动时不改 world 里的 <scene>，保持白天基线。
+         fill_diffuse 是夜间档给补光灯的亮度；这版 Gazebo 的灯亮度在 1 附近就被
+         夹住（实测 1.8 与 30 量不出差别），所以取 1.0，剩下的靠衰减参数调。 -->
+    <plugin name="v2x_lighting" filename="libv2x_lighting.so">
+      <default>none</default>
+      <fill_lights>gate_j3_north_fill,gate_j2_south_fill</fill_lights>
+      <fill_diffuse>1.0</fill_diffuse>
+    </plugin>
+
+    <!-- ════ BEGIN GENERATED: parking（tools/gen_parking_world.py 生成，勿手改）════
+         数据源：src/v2x_demo/config/parking_zones.yaml（唯一真值来源）
+         重生成：python3 tools/gen_parking_world.py
+         改点位请改 yaml 再重跑本脚本 + tools/check_parking_layout.py，
+         直接改这一段会在下次生成时被整块覆盖掉。
+    -->
+    <model name="parking_floor">
+      <static>true</static>
+      <pose>11.1500 -9.6500 6.7000 0.0000 0.0000 0.0000</pose>
+      <link name="link">
+        <visual name="asphalt">
+          <pose>0.0000 0.0000 -0.0130 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>10.7000 8.3000 0.0500</size></box></geometry>
+          <material><ambient>0.07 0.14 0.09 1</ambient><diffuse>0.18 0.38 0.22 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="parking_stripes">
+      <static>true</static>
+      <pose>11.1500 -9.6500 6.7000 0.0000 0.0000 0.0000</pose>
+      <link name="link">
+        <visual name="s001">
+          <pose>11.1500 -13.8000 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>10.7000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s002">
+          <pose>11.1500 -5.5000 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>10.7000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s003">
+          <pose>5.8000 -9.6500 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>8.3000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s004">
+          <pose>16.5000 -9.6500 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>8.3000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s005">
+          <pose>11.1000 -10.6500 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>8.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s006">
+          <pose>11.1000 -8.4500 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>8.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s007">
+          <pose>11.3500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s008">
+          <pose>12.6500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s009">
+          <pose>6.1500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s010">
+          <pose>7.4500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s011">
+          <pose>9.4000 -13.8000 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>3.9000 0.0800 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s012">
+          <pose>9.4000 -11.0500 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>3.9000 0.0800 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s013">
+          <pose>7.4500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.0800 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s014">
+          <pose>11.3500 -12.4250 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>2.7500 0.0800 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s015">
+          <pose>7.2250 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s016">
+          <pose>10.3050 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s017">
+          <pose>8.7650 -7.0300 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>3.0800 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s018">
+          <pose>8.7650 -7.1900 0.0600 0 0 0.0000</pose>
+          <geometry><box><size>1.6940 0.1000 0.0900</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s019">
+          <pose>10.3050 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s020">
+          <pose>13.3750 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s021">
+          <pose>11.8400 -7.0300 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>3.0700 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s022">
+          <pose>11.8400 -7.1900 0.0600 0 0 0.0000</pose>
+          <geometry><box><size>1.6885 0.1000 0.0900</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s023">
+          <pose>13.3775 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s024">
+          <pose>16.4525 -9.3300 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>4.6000 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s025">
+          <pose>14.9150 -7.0300 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>3.0750 0.1000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s026">
+          <pose>14.9150 -7.1900 0.0600 0 0 0.0000</pose>
+          <geometry><box><size>1.6913 0.1000 0.0900</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s027">
+          <pose>12.0000 -11.2700 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>1.2000 0.2000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s028">
+          <pose>6.8000 -10.8300 0.0210 0 0 0.0000</pose>
+          <geometry><box><size>1.2000 0.2000 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s029">
+          <pose>12.0000 -11.4500 0.0250 0 0 0.0000</pose>
+          <geometry><box><size>1.3000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s030">
+          <pose>12.0000 -10.3500 0.0250 0 0 0.0000</pose>
+          <geometry><box><size>1.3000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s031">
+          <pose>11.3500 -10.9000 0.0250 0 0 1.5708</pose>
+          <geometry><box><size>1.1000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s032">
+          <pose>12.6500 -10.9000 0.0250 0 0 1.5708</pose>
+          <geometry><box><size>1.1000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s033">
+          <pose>12.0000 -10.9000 0.0260 0 0 0.7854</pose>
+          <geometry><box><size>0.1800 0.1800 0.0140</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s034">
+          <pose>6.8000 -11.1500 0.0250 0 0 0.0000</pose>
+          <geometry><box><size>1.3000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s035">
+          <pose>6.8000 -10.3500 0.0250 0 0 0.0000</pose>
+          <geometry><box><size>1.3000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s036">
+          <pose>6.1500 -10.7500 0.0250 0 0 1.5708</pose>
+          <geometry><box><size>0.8000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s037">
+          <pose>7.4500 -10.7500 0.0250 0 0 1.5708</pose>
+          <geometry><box><size>0.8000 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s038">
+          <pose>6.8000 -10.7500 0.0260 0 0 0.7854</pose>
+          <geometry><box><size>0.1800 0.1800 0.0140</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s039">
+          <pose>12.0000 -13.1750 0.0210 0 0 1.5708</pose>
+          <geometry><box><size>0.5500 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s040">
+          <pose>12.0746 -13.0065 0.0210 0 0 -0.9599</pose>
+          <geometry><box><size>0.2600 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s041">
+          <pose>11.9254 -13.0065 0.0210 0 0 4.1015</pose>
+          <geometry><box><size>0.2600 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s042">
+          <pose>6.8000 -13.2250 0.0210 0 0 -1.5708</pose>
+          <geometry><box><size>0.5500 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s043">
+          <pose>6.7254 -13.3935 0.0210 0 0 -4.1015</pose>
+          <geometry><box><size>0.2600 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="s044">
+          <pose>6.8746 -13.3935 0.0210 0 0 0.9599</pose>
+          <geometry><box><size>0.2600 0.0600 0.0120</size></box></geometry>
+          <material><ambient>0.55 0.55 0.52 1</ambient><diffuse>0.86 0.86 0.82 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="parking_booth">
+      <static>true</static>
+      <pose>9.4000 -11.3000 6.7000 0.0000 0.0000 0.0000</pose>
+      <link name="link">
+        <visual name="body">
+          <pose>0.0000 0.0000 1.1000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.0000 1.0000 2.2000</size></box></geometry>
+          <material><ambient>0.20 0.26 0.30 1</ambient><diffuse>0.38 0.46 0.52 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="glass">
+          <pose>0.0000 0.0000 1.3640 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.0100 1.0100 0.4840</size></box></geometry>
+          <material><ambient>0.10 0.16 0.20 1</ambient><diffuse>0.55 0.70 0.78 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="roof">
+          <pose>0.0000 0.0000 2.2500 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.2400 1.2400 0.1000</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="body_col">
+          <pose>0.0000 0.0000 1.1000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.0000 1.0000 2.2000</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="parking_gantry">
+      <static>true</static>
+      <pose>9.4000 -7.0500 6.7000 0.0000 0.0000 0.0000</pose>
+      <!-- 相机吊在两条车道中心线的正上方、且整体退到镜头平面之后（任务三 v2 的教训：横臂前伸 6 cm 就抓到 82% 自家立杆）。本模型带 camera sensor，运行期绝不可 delete_entity。 -->
+      <link name="link">
+        <visual name="mast1">
+          <pose>-3.3500 0.0000 1.3250 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>2.6500</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="mast1_col">
+          <pose>-3.3500 0.0000 1.3250 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>2.6500</length></cylinder></geometry>
+        </collision>
+        <visual name="mast1_base">
+          <pose>-3.3500 0.0000 0.0400 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.2160</radius><length>0.0800</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="mast2">
+          <pose>3.3500 0.0000 1.3250 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>2.6500</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="mast2_col">
+          <pose>3.3500 0.0000 1.3250 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>2.6500</length></cylinder></geometry>
+        </collision>
+        <visual name="mast2_base">
+          <pose>3.3500 0.0000 0.0400 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.2160</radius><length>0.0800</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="beam">
+          <pose>0.0000 0.0000 2.4000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>6.7000 0.1200 0.1400</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="beam_trim">
+          <pose>0.0000 0.0000 2.3100 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>6.7000 0.0720 0.0400</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <sensor name="gate_camera_in" type="camera">
+          <pose>2.6000 0.0000 2.2500 0.0000 0.4500 -1.5708</pose>
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <camera name="gate_in">
+            <horizontal_fov>0.6000</horizontal_fov>
+            <image><width>1920</width><height>1080</height><format>R8G8B8</format></image>
+            <clip><near>0.0500</near><far>40.0000</far></clip>
+          </camera>
+          <plugin name="gazebo_ros_camera_gate_in" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/parking</namespace>
+            </ros>
+            <camera_name>gate_in</camera_name>
+            <frame_name>gate_in/camera_link</frame_name>
+          </plugin>
+          <plugin name="v2x_gate" filename="libv2x_gate.so">
+            <gate_id>gate_in</gate_id>
+            <capture_dir>/tmp/v2x_parking_in</capture_dir>
+            <focus>12.0000 -11.2100 6.8500</focus>
+            <near_radius>1.4000</near_radius>
+            <far_radius>2.5000</far_radius>
+            <frame_wait>3.0000</frame_wait>
+            <rearm_on_fail>true</rearm_on_fail>
+            <render_lag>0.0000</render_lag>
+            <vehicle_prefix>car_</vehicle_prefix>
+            <chassis_link>chassis</chassis_link>
+            <image_format>R8G8B8</image_format>
+          </plugin>
+        </sensor>
+        <visual name="cambox_in">
+          <pose>2.6000 0.0000 2.2500 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.3000 0.2000 0.1600</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <sensor name="gate_camera_out" type="camera">
+          <pose>-2.6000 0.0000 2.2500 0.0000 0.7880 -1.5708</pose>
+          <always_on>true</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <camera name="gate_out">
+            <horizontal_fov>0.6000</horizontal_fov>
+            <image><width>1920</width><height>1080</height><format>R8G8B8</format></image>
+            <clip><near>0.0500</near><far>40.0000</far></clip>
+          </camera>
+          <plugin name="gazebo_ros_camera_gate_out" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/parking</namespace>
+            </ros>
+            <camera_name>gate_out</camera_name>
+            <frame_name>gate_out/camera_link</frame_name>
+          </plugin>
+          <plugin name="v2x_gate" filename="libv2x_gate.so">
+            <gate_id>gate_out</gate_id>
+            <capture_dir>/tmp/v2x_parking_out</capture_dir>
+            <focus>6.8000 -10.9500 6.8500</focus>
+            <near_radius>1.4000</near_radius>
+            <far_radius>2.5000</far_radius>
+            <frame_wait>3.0000</frame_wait>
+            <rearm_on_fail>true</rearm_on_fail>
+            <render_lag>0.0000</render_lag>
+            <vehicle_prefix>car_</vehicle_prefix>
+            <chassis_link>chassis</chassis_link>
+            <image_format>R8G8B8</image_format>
+          </plugin>
+        </sensor>
+        <visual name="cambox_out">
+          <pose>-2.6000 0.0000 2.2500 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.3000 0.2000 0.1600</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="parking_gate_in">
+      <static>false</static>
+      <pose>11.3500 -11.0500 6.7000 0.0000 0.0000 0.0000</pose>
+      <!-- 入口闸机：机箱只画不碰（它压在分隔岛里，车永远不会开进去，真撞上说明摆渡路线本身错了，那时该改的是路线不是加碰撞盒）；碰撞件只有铰点柱、接收柱和杆身，与 tools/check_parking_layout.py 里 statics 表一一对应。杆的碰撞段止于接收柱前 2 cm，放平时不与柱顶接触，免得被 ODE 顶起来抖。 -->
+      <link name="housing">
+        <inertial>
+          <pose>-0.4100 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <mass>40.0000</mass>
+          <inertia><ixx>0.6107</ixx><ixy>0</ixy><iyy>0.6853</iyy><ixz>0</ixz><iyz>0</iyz><izz>0.5253</izz></inertia>
+        </inertial>
+        <visual name="cabinet">
+          <pose>-0.4100 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.3000 0.2600 0.3400</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="cabinet_door">
+          <pose>-0.5630 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.0100 0.2080 0.2720</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="lamp">
+          <pose>-0.4100 0.0000 0.4100 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0500</radius><length>0.1000</length></cylinder></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="pivot_post">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="pivot_base">
+          <pose>0.0000 0.0000 0.0300 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1800</radius><length>0.0600</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="pivot_post_col">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+        </collision>
+        <visual name="hub">
+          <pose>0.0000 0.0000 0.3000 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>0.1320</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <joint name="housing_world" type="fixed">
+        <parent>world</parent>
+        <child>housing</child>
+      </joint>
+      <link name="boom">
+        <pose>0.0000 0.0000 0.3000 0.0000 0.0000 0.0000</pose>
+        <inertial>
+          <pose>0.8500 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <mass>3.0000</mass>
+          <inertia><ixx>0.0034</ixx><ixy>0</ixy><iyy>0.5634</iyy><ixz>0</ixz><iyz>0</iyz><izz>0.5650</izz></inertia>
+        </inertial>
+        <visual name="boom_seg0">
+          <pose>-0.0750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg1">
+          <pose>0.1750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg2">
+          <pose>0.4250 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg3">
+          <pose>0.6750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg4">
+          <pose>0.9250 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg5">
+          <pose>1.1750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_tip">
+          <pose>1.3000 0.0000 -0.0100 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.0500 0.1300 0.0960</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="boom_col">
+          <pose>0.5900 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.1800 0.1000 0.0600</size></box></geometry>
+        </collision>
+      </link>
+      <joint name="boom_joint" type="revolute">
+        <parent>housing</parent>
+        <child>boom</child>
+        <axis>
+          <xyz>0.0000 -1.0000 0.0000</xyz>
+          <use_parent_model_frame>true</use_parent_model_frame>
+          <limit><lower>0.0000</lower><upper>1.5708</upper><effort>300.0000</effort><velocity>2.0000</velocity></limit>
+          <dynamics><damping>0.1000</damping><friction>0.0500</friction></dynamics>
+        </axis>
+      </joint>
+      <plugin name="v2x_barrier" filename="libv2x_barrier.so">
+        <gate_id>gate_in</gate_id>
+        <joint_name>boom_joint</joint_name>
+        <boom_link>boom</boom_link>
+        <cmd_topic>/parking/gate/gate_in/cmd</cmd_topic>
+        <state_topic>/parking/gate/gate_in/state</state_topic>
+        <fault_topic>/parking/fault_inject</fault_topic>
+        <state_rate>20.0000</state_rate>
+        <open_angle>1.5708</open_angle>
+        <closed_angle>0.0000</closed_angle>
+        <angle_tolerance>0.0800</angle_tolerance>
+        <p_gain>50.0000</p_gain>
+        <d_gain>5.0000</d_gain>
+        <raise_timeout_s>5.0000</raise_timeout_s>
+        <lower_timeout_s>5.0000</lower_timeout_s>
+        <effort_limit>300.0000</effort_limit>
+        <jam_effort_ratio>0.9000</jam_effort_ratio>
+        <gravity_comp>true</gravity_comp>
+        <loop_id>PKG-in-loop</loop_id>
+        <loop_center>12.0000 -10.9000 6.7000</loop_center>
+        <loop_size>1.3000 1.1000 0.1</loop_size>
+        <vehicle_length>1.6000</vehicle_length>
+        <vehicle_width>0.8000</vehicle_width>
+        <vehicle_prefix>car_</vehicle_prefix>
+        <chassis_link>chassis</chassis_link>
+      </plugin>
+    </model>
+
+    <model name="parking_gate_in_receiver">
+      <static>true</static>
+      <pose>12.6500 -11.0500 6.7000 0.0000 0.0000 0.0000</pose>
+      <link name="link">
+        <visual name="post">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="cap">
+          <pose>0.0000 0.0000 0.2600 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.1600 0.1600 0.0400</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="post_col">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="parking_gate_out">
+      <static>false</static>
+      <pose>7.4500 -11.0500 6.7000 0.0000 0.0000 0.0000</pose>
+      <!-- 出口闸机：机箱只画不碰（它压在分隔岛里，车永远不会开进去，真撞上说明摆渡路线本身错了，那时该改的是路线不是加碰撞盒）；碰撞件只有铰点柱、接收柱和杆身，与 tools/check_parking_layout.py 里 statics 表一一对应。杆的碰撞段止于接收柱前 2 cm，放平时不与柱顶接触，免得被 ODE 顶起来抖。 -->
+      <link name="housing">
+        <inertial>
+          <pose>0.4100 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <mass>40.0000</mass>
+          <inertia><ixx>0.6107</ixx><ixy>0</ixy><iyy>0.6853</iyy><ixz>0</ixz><iyz>0</iyz><izz>0.5253</izz></inertia>
+        </inertial>
+        <visual name="cabinet">
+          <pose>0.4100 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.3000 0.2600 0.3400</size></box></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="cabinet_door">
+          <pose>0.5630 0.0000 0.1700 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.0100 0.2080 0.2720</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="lamp">
+          <pose>0.4100 0.0000 0.4100 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0500</radius><length>0.1000</length></cylinder></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="pivot_post">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="pivot_base">
+          <pose>0.0000 0.0000 0.0300 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1800</radius><length>0.0600</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="pivot_post_col">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+        </collision>
+        <visual name="hub">
+          <pose>0.0000 0.0000 0.3000 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.0900</radius><length>0.1320</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <joint name="housing_world" type="fixed">
+        <parent>world</parent>
+        <child>housing</child>
+      </joint>
+      <link name="boom">
+        <pose>0.0000 0.0000 0.3000 0.0000 0.0000 0.0000</pose>
+        <inertial>
+          <pose>-0.8500 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <mass>3.0000</mass>
+          <inertia><ixx>0.0034</ixx><ixy>0</ixy><iyy>0.5634</iyy><ixz>0</ixz><iyz>0</iyz><izz>0.5650</izz></inertia>
+        </inertial>
+        <visual name="boom_seg0">
+          <pose>0.0750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg1">
+          <pose>-0.1750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg2">
+          <pose>-0.4250 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg3">
+          <pose>-0.6750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg4">
+          <pose>-0.9250 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.55 0.06 0.06 1</ambient><diffuse>0.86 0.12 0.12 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_seg5">
+          <pose>-1.1750 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.2500 0.1000 0.0600</size></box></geometry>
+          <material><ambient>0.60 0.60 0.58 1</ambient><diffuse>0.92 0.92 0.88 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="boom_tip">
+          <pose>-1.3000 0.0000 -0.0100 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.0500 0.1300 0.0960</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="boom_col">
+          <pose>-0.5900 0.0000 0.0000 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>1.1800 0.1000 0.0600</size></box></geometry>
+        </collision>
+      </link>
+      <joint name="boom_joint" type="revolute">
+        <parent>housing</parent>
+        <child>boom</child>
+        <axis>
+          <xyz>0.0000 1.0000 0.0000</xyz>
+          <use_parent_model_frame>true</use_parent_model_frame>
+          <limit><lower>0.0000</lower><upper>1.5708</upper><effort>300.0000</effort><velocity>2.0000</velocity></limit>
+          <dynamics><damping>0.1000</damping><friction>0.0500</friction></dynamics>
+        </axis>
+      </joint>
+      <plugin name="v2x_barrier" filename="libv2x_barrier.so">
+        <gate_id>gate_out</gate_id>
+        <joint_name>boom_joint</joint_name>
+        <boom_link>boom</boom_link>
+        <cmd_topic>/parking/gate/gate_out/cmd</cmd_topic>
+        <state_topic>/parking/gate/gate_out/state</state_topic>
+        <fault_topic>/parking/fault_inject</fault_topic>
+        <state_rate>20.0000</state_rate>
+        <open_angle>1.5708</open_angle>
+        <closed_angle>0.0000</closed_angle>
+        <angle_tolerance>0.0800</angle_tolerance>
+        <p_gain>50.0000</p_gain>
+        <d_gain>5.0000</d_gain>
+        <raise_timeout_s>5.0000</raise_timeout_s>
+        <lower_timeout_s>5.0000</lower_timeout_s>
+        <effort_limit>300.0000</effort_limit>
+        <jam_effort_ratio>0.9000</jam_effort_ratio>
+        <gravity_comp>true</gravity_comp>
+        <loop_id>PKG-out-loop</loop_id>
+        <loop_center>6.8000 -10.7500 6.7000</loop_center>
+        <loop_size>1.3000 0.8000 0.1</loop_size>
+        <vehicle_length>1.6000</vehicle_length>
+        <vehicle_width>0.8000</vehicle_width>
+        <vehicle_prefix>car_</vehicle_prefix>
+        <chassis_link>chassis</chassis_link>
+      </plugin>
+    </model>
+
+    <model name="parking_gate_out_receiver">
+      <static>true</static>
+      <pose>6.1500 -11.0500 6.7000 0.0000 0.0000 0.0000</pose>
+      <link name="link">
+        <visual name="post">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="cap">
+          <pose>0.0000 0.0000 0.2600 0.0000 0.0000 0.0000</pose>
+          <geometry><box><size>0.1600 0.1600 0.0400</size></box></geometry>
+          <material><ambient>0.55 0.46 0.10 1</ambient><diffuse>0.86 0.72 0.16 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <collision name="post_col">
+          <pose>0.0000 0.0000 0.1200 0.0000 0.0000 0.0000</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.2400</length></cylinder></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ── 停车场摆渡车 car_6（本函数生成，与五车同底盘）──
+         初始位姿取 parking.shuttle.park_pose = [23.5000, -23.5000, 0.0000]
+    -->
+    <model name="car_6">
+      <pose>23.5000 -23.5000 7.0000 0 0 0.0000</pose>
+
+      <link name="chassis">
+        <inertial>
+          <pose>0 0 0.2500</pose>
+          <mass>80.0000</mass>
+          <inertia><ixx>5.3333</ixx><ixy>0</ixy><iyy>18.1333</iyy><ixz>0</ixz><iyz>0</iyz><izz>21.3333</izz></inertia>
+        </inertial>
+        <collision name="chassis_collision">
+          <pose>0 0 0.2500 0 0 0</pose>
+          <geometry><box><size>1.6000 0.8000 0.4000</size></box></geometry>
+        </collision>
+        <visual name="chassis_body">
+          <pose>0 0 0.2500 0 0 0</pose>
+          <geometry><box><size>1.6000 0.8000 0.4000</size></box></geometry>
+          <material><ambient>0.10 0.42 0.48 1</ambient><diffuse>0.18 0.66 0.72 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+        <visual name="plate_front">
+          <pose>0.8100 0 0.1500 0 0 0</pose>
+          <geometry><box><size>0.0200 0.4400 0.1400</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="plate_rear">
+          <pose>-0.8100 0 0.1500 0 0 3.1416</pose>
+          <geometry><box><size>0.0200 0.4400 0.1400</size></box></geometry>
+          <material><script>
+            <uri>file:///tmp/v2x_plates/placeholder/placeholder.material</uri>
+            <name>v2x/plate_placeholder</name>
+          </script></material>
+        </visual>
+        <visual name="cabin">
+          <pose>0 -0.0800 0.5700 0 0 0</pose>
+          <geometry><box><size>0.7200 0.6800 0.2400</size></box></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+
+      <link name="left_wheel_link">
+        <pose>0.4000 0.3500 0.1000 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia><ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.0800</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.0800</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <joint name="left_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>left_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="right_wheel_link">
+        <pose>0.4000 -0.3500 0.1000 0 0 0</pose>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia><ixx>0.005067</ixx><iyy>0.010000</iyy><izz>0.005067</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.0800</length></cylinder></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.1000</radius><length>0.0800</length></cylinder></geometry>
+          <material><ambient>0.05 0.05 0.06 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <joint name="right_wheel_joint" type="revolute">
+        <parent>chassis</parent>
+        <child>right_wheel_link</child>
+        <axis><xyz>0 1 0</xyz><dynamics><friction>0.1</friction></dynamics></axis>
+      </joint>
+
+      <link name="caster_link">
+        <pose>-0.4000 0 0.0600 0 0 0</pose>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia><ixx>0.001</ixx><iyy>0.001</iyy><izz>0.001</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.0600</radius></sphere></geometry>
+          <surface>
+            <friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction>
+            <contact><ode><min_depth>0.001</min_depth><kp>1e8</kp></ode></contact>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.0600</radius></sphere></geometry>
+          <material><ambient>0.25 0.25 0.28 1</ambient><diffuse>0.45 0.45 0.50 1</diffuse><specular>0 0 0 1</specular><emissive>0 0 0 1</emissive></material>
+        </visual>
+      </link>
+      <joint name="caster_joint" type="fixed">
+        <parent>chassis</parent>
+        <child>caster_link</child>
+      </joint>
+
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+        <ros>
+          <namespace>/car_6</namespace>
+          <remapping>cmd_vel:=cmd_vel</remapping>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <update_rate>100</update_rate>
+        <cmd_vel_timeout>0.3</cmd_vel_timeout>
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.7000</wheel_separation>
+        <wheel_diameter>0.2000</wheel_diameter>
+        <max_wheel_torque>12.0</max_wheel_torque>
+        <max_wheel_acceleration>6.0</max_wheel_acceleration>
+        <publish_odom>true</publish_odom>
+        <publish_odom_tf>false</publish_odom_tf>
+        <publish_wheel_tf>false</publish_wheel_tf>
+        <odometry_frame>car_6_odom</odometry_frame>
+        <robot_base_frame>car_6/base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- ════ END GENERATED: parking ════ -->
+
+    <!-- Gazebo ROS 插件 -->
+    <!-- gazebo_ros_init / gazebo_ros_factory 是 System 插件，
+         由 gzserver -s 参数加载，不能写在 world 里 -->
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+  
+
+    <!-- BEGIN sandbox_fixtures_coll (tools/gen_fixture_collisions.py 自动生成，勿手改) -->
+    <!-- B 类设施等效盒：从 room_33 沙盘网格投影生成，只挡不画（无 visual）。
+         生成脚本 tools/gen_fixture_collisions.py，判据：盒面距车道中心线 >=2.0 m。 -->
+    <model name="sandbox_fixtures_coll">
+      <static>true</static>
+      <link name="fixtures">
+        <!-- 近景硬铺1500 h_raw=0.30 -->
+        <collision name="c00"><pose>-17.000 4.875 6.850 0 0 0</pose><geometry><box><size>5.500 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c01"><pose>-18.625 6.125 6.830 0 0 0</pose><geometry><box><size>2.250 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c02"><pose>-19.000 6.375 6.830 0 0 0</pose><geometry><box><size>1.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c03"><pose>-17.250 5.375 6.830 0 0 0</pose><geometry><box><size>4.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c04"><pose>-17.625 5.625 6.830 0 0 0</pose><geometry><box><size>3.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c05"><pose>-18.125 5.875 6.830 0 0 0</pose><geometry><box><size>2.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c06"><pose>-19.125 4.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c07"><pose>-16.750 5.125 7.200 0 0 0</pose><geometry><box><size>5.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c08"><pose>-16.625 4.625 7.200 0 0 0</pose><geometry><box><size>4.750 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c09"><pose>-18.500 3.875 6.850 0 0 0</pose><geometry><box><size>0.500 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c10"><pose>-16.625 4.375 7.200 0 0 0</pose><geometry><box><size>4.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c11"><pose>-16.500 4.125 7.200 0 0 0</pose><geometry><box><size>4.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c12"><pose>-17.875 3.750 6.855 0 0 0</pose><geometry><box><size>0.250 0.500 0.310</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.31 -->
+        <collision name="c13"><pose>-16.500 3.875 6.855 0 0 0</pose><geometry><box><size>2.500 0.250 0.310</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c14"><pose>-17.375 3.625 6.855 0 0 0</pose><geometry><box><size>0.250 0.250 0.310</size></box></geometry></collision>
+        <!-- Mat3d66-5387514-15-65154 h_raw=2.66 -->
+        <collision name="c15"><pose>-16.750 3.625 7.200 0 0 0</pose><geometry><box><size>0.500 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c16"><pose>-15.875 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c17"><pose>-15.375 3.625 6.855 0 0 0</pose><geometry><box><size>0.250 0.250 0.310</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c18"><pose>-14.625 3.875 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c19"><pose>-14.125 4.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.30 -->
+        <collision name="c20"><pose>6.500 4.875 6.850 0 0 0</pose><geometry><box><size>5.500 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c21"><pose>6.375 5.750 6.830 0 0 0</pose><geometry><box><size>5.250 0.500 0.260</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.25 -->
+        <collision name="c22"><pose>4.625 6.125 6.825 0 0 0</pose><geometry><box><size>1.750 0.250 0.250</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.25 -->
+        <collision name="c23"><pose>4.125 6.375 6.825 0 0 0</pose><geometry><box><size>0.750 0.250 0.250</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c24"><pose>6.625 5.125 7.200 0 0 0</pose><geometry><box><size>5.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c25"><pose>6.375 5.375 6.830 0 0 0</pose><geometry><box><size>4.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c26"><pose>4.375 4.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.30 -->
+        <collision name="c27"><pose>7.000 4.625 6.850 0 0 0</pose><geometry><box><size>5.000 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c28"><pose>4.875 3.875 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c29"><pose>6.750 4.375 7.200 0 0 0</pose><geometry><box><size>4.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.30 -->
+        <collision name="c30"><pose>7.000 4.125 6.850 0 0 0</pose><geometry><box><size>4.000 0.250 0.300</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=3.01 -->
+        <collision name="c31"><pose>6.750 3.875 7.200 0 0 0</pose><geometry><box><size>3.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c32"><pose>5.625 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c33"><pose>6.125 3.625 6.855 0 0 0</pose><geometry><box><size>0.250 0.250 0.310</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=2.66 -->
+        <collision name="c34"><pose>6.875 3.625 7.200 0 0 0</pose><geometry><box><size>0.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c35"><pose>7.875 6.125 6.830 0 0 0</pose><geometry><box><size>2.250 0.250 0.260</size></box></geometry></collision>
+        <!-- Mat3d66-5387514-15-65154 h_raw=0.80 -->
+        <collision name="c36"><pose>7.125 3.625 7.100 0 0 0</pose><geometry><box><size>0.250 0.250 0.800</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c37"><pose>8.125 6.375 6.830 0 0 0</pose><geometry><box><size>1.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c38"><pose>7.625 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c39"><pose>8.500 6.625 6.830 0 0 0</pose><geometry><box><size>1.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c40"><pose>8.125 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=2.66 -->
+        <collision name="c41"><pose>-19.650 -11.875 7.200 0 0 0</pose><geometry><box><size>0.300 0.250 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.73 -->
+        <collision name="c42"><pose>-18.025 -11.375 7.065 0 0 0</pose><geometry><box><size>3.550 0.250 0.730</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.73 -->
+        <collision name="c43"><pose>-18.025 -10.625 7.065 0 0 0</pose><geometry><box><size>3.550 0.250 0.730</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.73 -->
+        <collision name="c44"><pose>-18.025 -9.875 7.065 0 0 0</pose><geometry><box><size>3.550 0.250 0.730</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.73 -->
+        <collision name="c45"><pose>-18.150 -9.125 7.065 0 0 0</pose><geometry><box><size>3.300 0.250 0.730</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.73 -->
+        <collision name="c46"><pose>-18.025 -8.375 7.065 0 0 0</pose><geometry><box><size>3.550 0.250 0.730</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c47"><pose>-18.025 -7.750 7.070 0 0 0</pose><geometry><box><size>3.550 0.500 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c48"><pose>-17.775 -7.125 7.070 0 0 0</pose><geometry><box><size>4.050 0.250 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c49"><pose>-17.900 -6.625 7.070 0 0 0</pose><geometry><box><size>3.800 0.750 0.740</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.74 -->
+        <collision name="c50"><pose>-18.025 -12.750 7.070 0 0 0</pose><geometry><box><size>3.550 1.000 0.740</size></box></geometry></collision>
+        <!-- 人行道 h_raw=0.73 -->
+        <collision name="c51"><pose>-19.650 -12.125 7.065 0 0 0</pose><geometry><box><size>0.300 0.250 0.730</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.80 -->
+        <collision name="c52"><pose>-17.900 -11.625 7.100 0 0 0</pose><geometry><box><size>3.800 0.250 0.800</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c53"><pose>-18.025 -11.000 7.070 0 0 0</pose><geometry><box><size>3.550 0.500 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c54"><pose>-18.025 -10.250 7.070 0 0 0</pose><geometry><box><size>3.550 0.500 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c55"><pose>-18.150 -9.500 7.070 0 0 0</pose><geometry><box><size>3.300 0.500 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.74 -->
+        <collision name="c56"><pose>-18.150 -8.750 7.070 0 0 0</pose><geometry><box><size>3.300 0.500 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=0.69 -->
+        <collision name="c57"><pose>-18.025 -8.125 7.045 0 0 0</pose><geometry><box><size>3.550 0.250 0.690</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-4-60224 h_raw=3.54 -->
+        <collision name="c58"><pose>-17.900 -7.375 7.200 0 0 0</pose><geometry><box><size>3.800 0.250 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-5-93154 h_raw=2.66 -->
+        <collision name="c59"><pose>-17.775 -6.000 7.200 0 0 0</pose><geometry><box><size>4.050 0.500 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-5-93154 h_raw=0.74 -->
+        <collision name="c60"><pose>-17.900 -5.625 7.070 0 0 0</pose><geometry><box><size>3.800 0.250 0.740</size></box></geometry></collision>
+        <!-- Mat3d66-8446837-5-93154 h_raw=1.01 -->
+        <collision name="c61"><pose>-18.150 -5.375 7.200 0 0 0</pose><geometry><box><size>3.300 0.250 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.74 -->
+        <collision name="c62"><pose>-18.000 -13.500 7.070 0 0 0</pose><geometry><box><size>3.500 0.500 0.740</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c63"><pose>-18.125 -5.000 7.200 0 0 0</pose><geometry><box><size>3.250 0.500 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.74 -->
+        <collision name="c64"><pose>-17.875 -13.875 7.070 0 0 0</pose><geometry><box><size>3.250 0.250 0.740</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.73 -->
+        <collision name="c65"><pose>-18.000 -4.625 7.065 0 0 0</pose><geometry><box><size>3.000 0.250 0.730</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.73 -->
+        <collision name="c66"><pose>-17.750 -14.125 7.065 0 0 0</pose><geometry><box><size>3.000 0.250 0.730</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.26 -->
+        <collision name="c67"><pose>-17.750 -11.875 6.830 0 0 0</pose><geometry><box><size>3.000 0.250 0.260</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c68"><pose>-17.875 -4.375 7.200 0 0 0</pose><geometry><box><size>2.750 0.250 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-7605616-3-87563 h_raw=0.74 -->
+        <collision name="c69"><pose>-17.625 -14.375 7.070 0 0 0</pose><geometry><box><size>2.750 0.250 0.740</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.26 -->
+        <collision name="c70"><pose>-17.625 -12.125 6.830 0 0 0</pose><geometry><box><size>2.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.31 -->
+        <collision name="c71"><pose>-17.750 -4.125 6.855 0 0 0</pose><geometry><box><size>2.500 0.250 0.310</size></box></geometry></collision>
+        <!-- Mat3d66-7605616-3-87563 h_raw=0.97 -->
+        <collision name="c72"><pose>-11.750 -14.625 7.185 0 0 0</pose><geometry><box><size>14.000 0.250 0.970</size></box></geometry></collision>
+        <!-- 人行道 h_raw=0.30 -->
+        <collision name="c73"><pose>-18.375 -3.875 6.850 0 0 0</pose><geometry><box><size>0.750 0.250 0.300</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.25 -->
+        <collision name="c74"><pose>-17.000 -3.875 6.825 0 0 0</pose><geometry><box><size>0.500 0.250 0.250</size></box></geometry></collision>
+        <!-- Mat3d66-7605616-3-87563 h_raw=0.74 -->
+        <collision name="c75"><pose>-15.750 -14.375 7.070 0 0 0</pose><geometry><box><size>0.500 0.250 0.740</size></box></geometry></collision>
+        <!-- 3d66-VRayMtl-15881614-031 h_raw=1.01 -->
+        <collision name="c76"><pose>-14.750 -13.875 7.200 0 0 0</pose><geometry><box><size>1.000 0.250 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-7605616-3-87563 h_raw=1.01 -->
+        <collision name="c77"><pose>-9.750 -14.375 7.200 0 0 0</pose><geometry><box><size>10.500 0.250 1.000</size></box></geometry></collision>
+        <!-- 3d66-VRayMtl-15881614-031 h_raw=1.01 -->
+        <collision name="c78"><pose>-14.625 -13.625 7.200 0 0 0</pose><geometry><box><size>0.750 0.250 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-7605616-3-87563 h_raw=0.97 -->
+        <collision name="c79"><pose>-7.750 -14.125 7.185 0 0 0</pose><geometry><box><size>7.000 0.250 0.970</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c80"><pose>0.000 -19.875 6.850 0 0 0</pose><geometry><box><size>50.000 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c81"><pose>-24.750 -19.625 6.850 0 0 0</pose><geometry><box><size>0.500 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c82"><pose>-24.875 0.375 6.850 0 0 0</pose><geometry><box><size>0.250 39.750 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c83"><pose>-24.625 -6.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c84"><pose>-24.625 -0.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c85"><pose>-24.625 19.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c86"><pose>-24.375 -19.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c87"><pose>-24.375 19.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c88"><pose>0.125 -19.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c89"><pose>0.375 -19.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c90"><pose>8.375 -19.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c91"><pose>24.375 -19.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c92"><pose>24.625 -19.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c93"><pose>-6.750 4.750 7.200 0 0 0</pose><geometry><box><size>5.500 0.500 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c94"><pose>-7.000 4.375 7.200 0 0 0</pose><geometry><box><size>4.500 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c95"><pose>-6.625 5.250 7.200 0 0 0</pose><geometry><box><size>5.250 0.500 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=2.35 -->
+        <collision name="c96"><pose>-7.000 4.125 7.200 0 0 0</pose><geometry><box><size>4.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=2.35 -->
+        <collision name="c97"><pose>-7.000 3.875 7.200 0 0 0</pose><geometry><box><size>3.500 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c98"><pose>-7.875 3.625 6.855 0 0 0</pose><geometry><box><size>0.250 0.250 0.310</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c99"><pose>-6.000 5.625 7.200 0 0 0</pose><geometry><box><size>4.000 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c100"><pose>-7.375 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c101"><pose>-5.750 5.875 6.830 0 0 0</pose><geometry><box><size>3.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 4-Defaultdz h_raw=3.33 -->
+        <collision name="c102"><pose>-6.500 3.625 7.200 0 0 0</pose><geometry><box><size>1.500 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c103"><pose>-5.375 6.125 6.830 0 0 0</pose><geometry><box><size>2.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c104"><pose>-5.125 6.375 6.830 0 0 0</pose><geometry><box><size>2.250 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c105"><pose>-4.750 6.625 6.830 0 0 0</pose><geometry><box><size>2.000 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c106"><pose>-5.250 3.625 6.850 0 0 0</pose><geometry><box><size>0.500 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c107"><pose>-4.625 4.125 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c108"><pose>15.000 5.875 6.830 0 0 0</pose><geometry><box><size>2.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c109"><pose>14.625 6.125 6.830 0 0 0</pose><geometry><box><size>1.750 0.250 0.260</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.31 -->
+        <collision name="c110"><pose>14.125 5.125 6.855 0 0 0</pose><geometry><box><size>0.250 1.250 0.310</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c111"><pose>16.750 5.000 7.200 0 0 0</pose><geometry><box><size>5.000 0.500 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c112"><pose>16.375 5.375 7.200 0 0 0</pose><geometry><box><size>4.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c113"><pose>15.750 5.625 6.830 0 0 0</pose><geometry><box><size>3.000 0.250 0.260</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=0.26 -->
+        <collision name="c114"><pose>14.500 6.375 6.830 0 0 0</pose><geometry><box><size>0.500 0.250 0.260</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=1.01 -->
+        <collision name="c115"><pose>14.625 4.375 7.200 0 0 0</pose><geometry><box><size>0.250 0.750 1.000</size></box></geometry></collision>
+        <!-- 近景硬铺1500 h_raw=1.01 -->
+        <collision name="c116"><pose>16.750 4.500 7.200 0 0 0</pose><geometry><box><size>4.000 0.500 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c117"><pose>15.125 4.000 6.855 0 0 0</pose><geometry><box><size>0.250 0.500 0.310</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c118"><pose>16.875 4.125 7.200 0 0 0</pose><geometry><box><size>3.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c119"><pose>15.625 3.750 6.850 0 0 0</pose><geometry><box><size>0.250 0.500 0.300</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c120"><pose>16.875 3.875 7.200 0 0 0</pose><geometry><box><size>2.250 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c121"><pose>16.375 3.625 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 3d66-VRayMtl-15881614-031 h_raw=2.66 -->
+        <collision name="c122"><pose>16.875 3.625 7.200 0 0 0</pose><geometry><box><size>0.750 0.250 1.000</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c123"><pose>17.125 3.375 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.31 -->
+        <collision name="c124"><pose>17.625 3.625 6.855 0 0 0</pose><geometry><box><size>0.250 0.250 0.310</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.25 -->
+        <collision name="c125"><pose>18.875 4.625 6.825 0 0 0</pose><geometry><box><size>0.250 0.250 0.250</size></box></geometry></collision>
+        <!-- 人行道 h_raw=2.84 -->
+        <collision name="c126"><pose>-23.750 5.000 7.200 0 0 0</pose><geometry><box><size>0.500 3.000 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.01 -->
+        <collision name="c127"><pose>4.525 -12.750 7.200 0 0 0</pose><geometry><box><size>1.450 1.000 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.30 -->
+        <collision name="c128"><pose>4.525 -13.500 6.850 0 0 0</pose><geometry><box><size>1.450 0.500 0.300</size></box></geometry></collision>
+        <!-- 人行道 h_raw=0.30 -->
+        <collision name="c129"><pose>4.625 -13.875 6.850 0 0 0</pose><geometry><box><size>1.250 0.250 0.300</size></box></geometry></collision>
+        <!-- c130 已删（2026-10-16，用户明文授权"可以删掉这个隐形墙"）。
+             原定义：<pose>5.625 -14.125 7.200 0 0 0</pose><size>2.750 0.250 1.000</size>
+             材质"草地_0029"、h_raw=1.07 → 截到 1.0 m，x 4.25..7.00 / y -14.25..-14.00、
+             顶面 7.70（路面 6.70 之上 1.0 m），画面上什么都没有，所以是"隐形墙"。
+             它是停车场南口复位原地转（航点 6.80,-12.80、瞬时中心=轮轴 6.80,-13.20）
+             扫掠扇形南侧唯一的拦路件：真弧最深只到 y=-13.765（本可过），但 align 相
+             转过目标朝向 +0.25 rad 会把车尾角压到 y=-13.955，离它的北缘只剩 4.5 cm，
+             于是轮子被顶住、车楔在 (6.31,-13.37) 不动。
+             删后安全性：车在此处不会再往南走（南环车道中心 y=-16.8，本盒距它 2.5 m 外，
+             生成脚本的 ±2.0 m 禁入带本来就不允许盒压车道，留着它只对摆渡车转点有害）；
+             南侧下一条等效盒 c131 的北缘在 y=-14.25，转点真弧余 0.30 m；
+             西侧 c127 的东缘在 x=5.25，转点后车尾西缘 x=5.60，余 0.35 m。
+             tools/gen_fixture_collisions.py 的 EXCLUDE 矩形登记了同一片，重生成不会复活。 -->
+        <!-- 混泥土 h_raw=1.10 -->
+        <collision name="c131"><pose>5.750 -14.375 7.200 0 0 0</pose><geometry><box><size>2.500 0.250 1.000</size></box></geometry></collision>
+        <!-- Material_#2147446483 h_raw=0.92 -->
+        <collision name="c132"><pose>5.875 -14.625 7.160 0 0 0</pose><geometry><box><size>2.250 0.250 0.920</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=1.10 -->
+        <collision name="c133"><pose>17.625 -4.500 7.200 0 0 0</pose><geometry><box><size>1.750 0.500 1.000</size></box></geometry></collision>
+        <!-- 混泥土 h_raw=1.07 -->
+        <collision name="c134"><pose>17.500 -3.875 7.200 0 0 0</pose><geometry><box><size>1.500 0.750 1.000</size></box></geometry></collision>
+        <!-- 混泥土 h_raw=1.23 -->
+        <collision name="c135"><pose>17.500 -14.500 7.200 0 0 0</pose><geometry><box><size>1.500 1.000 1.000</size></box></geometry></collision>
+        <!-- 草地_0029 h_raw=0.25 -->
+        <collision name="c136"><pose>18.375 -14.125 6.825 0 0 0</pose><geometry><box><size>0.250 0.250 0.250</size></box></geometry></collision>
+        <!-- 2-DefaultXXX h_raw=0.30 -->
+        <collision name="c137"><pose>-13.875 5.000 6.850 0 0 0</pose><geometry><box><size>0.250 0.500 0.300</size></box></geometry></collision>
+        <!-- Material_#358 h_raw=0.30 -->
+        <collision name="c138"><pose>-24.375 0.125 6.850 0 0 0</pose><geometry><box><size>0.250 0.250 0.300</size></box></geometry></collision>
+        <!-- Mat3d66-8783394-3-48389 h_raw=1.06 -->
+        <collision name="c139"><pose>-11.625 5.375 7.200 0 0 0</pose><geometry><box><size>0.250 0.250 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-8783394-11-59499 h_raw=0.37 -->
+        <collision name="c140"><pose>-10.000 4.375 6.885 0 0 0</pose><geometry><box><size>0.500 0.250 0.370</size></box></geometry></collision>
+        <!-- 人行道 h_raw=0.37 -->
+        <collision name="c141"><pose>20.125 -18.625 6.885 0 0 0</pose><geometry><box><size>0.250 0.750 0.370</size></box></geometry></collision>
+        <!-- Mat3d66-8783394-4-87397 h_raw=1.06 -->
+        <collision name="c142"><pose>-10.125 5.125 7.200 0 0 0</pose><geometry><box><size>0.250 0.750 1.000</size></box></geometry></collision>
+        <!-- Mat3d66-8783394-11-59499 h_raw=0.37 -->
+        <collision name="c143"><pose>-10.625 4.750 6.885 0 0 0</pose><geometry><box><size>0.250 0.500 0.370</size></box></geometry></collision>
+      </link>
+    </model>
+<!-- END sandbox_fixtures_coll -->
+
+    </world>
+</sdf>

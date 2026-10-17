@@ -1,0 +1,198 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="v2x_intersection">
+
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.8 0.95 1</background>
+      <shadows>1</shadows>
+    </scene>
+
+    <!-- ===================== 光照（太阳） ===================== -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- ===================== 地面 ===================== -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>200 200</size></plane>
+          </geometry>
+          <surface>
+            <friction><ode><mu>100</mu><mu2>50</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>200 200</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.35 0.55 0.3 1</ambient>
+            <diffuse>0.35 0.55 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===================== 道路：南北 + 东西 构成十字路口 ===================== -->
+    <model name="road_ns">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.01 0 0 0</pose>
+        <collision name="c"><geometry><box><size>12 60 0.02</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>12 60 0.02</size></box></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="road_ew">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.015 0 0 0</pose>
+        <collision name="c"><geometry><box><size>60 12 0.02</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>60 12 0.02</size></box></geometry>
+          <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 中央车道分隔线（黄色，南北向） -->
+    <model name="lane_line_ns">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.03 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>0.2 60 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>0.9 0.8 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- 中央车道分隔线（黄色，东西向） -->
+    <model name="lane_line_ew">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.03 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>60 0.2 0.005</size></box></geometry>
+          <material><ambient>0.9 0.8 0.1 1</ambient><diffuse>0.9 0.8 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 人行横道（白色斑马线，示意） -->
+    <model name="crosswalk_n">
+      <static>true</static>
+      <link name="link">
+        <pose>0 -6.8 0.035 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>10 1.2 0.005</size></box></geometry>
+          <material><ambient>0.9 0.9 0.9 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===================== 交通信号灯（复用 gazebo_models-master/stop_light） ===================== -->
+    <!-- 需保证 GAZEBO_MODEL_PATH 含 gazebo_models-master，见 SETUP.md 阶段 6.2 -->
+    <include>
+      <name>traffic_light_ne</name>
+      <uri>model://stop_light</uri>
+      <pose>6.5 6.5 0 0 0 -1.5708</pose>
+    </include>
+    <include>
+      <name>traffic_light_sw</name>
+      <uri>model://stop_light</uri>
+      <pose>-6.5 -6.5 0 0 0 1.5708</pose>
+    </include>
+
+    <!-- ===================== 建筑物/障碍物（供激光雷达与 Nav2 costmap 感知） ===================== -->
+    <model name="building_ne">
+      <static>true</static>
+      <link name="link">
+        <pose>18 18 3 0 0 0</pose>
+        <collision name="c"><geometry><box><size>10 10 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>10 10 6</size></box></geometry>
+          <material><ambient>0.6 0.55 0.5 1</ambient><diffuse>0.6 0.55 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_sw">
+      <static>true</static>
+      <link name="link">
+        <pose>-18 -18 2 0 0 0</pose>
+        <collision name="c"><geometry><box><size>8 8 4</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>8 8 4</size></box></geometry>
+          <material><ambient>0.5 0.55 0.65 1</ambient><diffuse>0.5 0.55 0.65 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 东侧建筑群：南路以东原为空旷区，激光(z≈1.72m)30m内无任何回波，
+         slam 地图东界始终贴着车位 → Nav2 起点 off-map 无法规划。
+         补建筑让地图东界稳定在车以东约10m。 -->
+    <model name="building_e1">
+      <static>true</static>
+      <link name="link">
+        <pose>11 -16 2 0 0 0</pose>
+        <collision name="c"><geometry><box><size>8 8 4</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>8 8 4</size></box></geometry>
+          <material><ambient>0.55 0.5 0.6 1</ambient><diffuse>0.55 0.5 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_e2">
+      <static>true</static>
+      <link name="link">
+        <pose>10 -6 2.5 0 0 0</pose>
+        <collision name="c"><geometry><box><size>7 7 5</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>7 7 5</size></box></geometry>
+          <material><ambient>0.6 0.5 0.5 1</ambient><diffuse>0.6 0.5 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 路边静态障碍（模拟停放车辆/路障，供避障测试） -->
+    <model name="obstacle_1">
+      <static>true</static>
+      <link name="link">
+        <pose>3 -12 0.5 0 0 0</pose>
+        <collision name="c"><geometry><box><size>1.8 4 1</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>1.8 4 1</size></box></geometry>
+          <material><ambient>0.2 0.4 0.7 1</ambient><diffuse>0.2 0.4 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 区域触发底座位姿源：发布 /model_states（全模型位姿+速度） -->
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"/>
+
+  </world>
+</sdf>

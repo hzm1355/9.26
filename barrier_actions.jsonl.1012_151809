@@ -1,0 +1,1 @@
+{"seq": 1, "ts": "2026-10-12 15:15:46", "sim_ts": 35.4, "action_id": "A00001-gate_in", "action": 5, "action_name": "拒绝动作", "gate_id": "gate_in", "vehicle_id": "car_6", "plate_number": "", "source": 0, "source_name": "自动", "fault": 0, "fault_name": "NONE", "from_rad": -0.0, "to_rad": 0.0, "elapsed_s": 35.35, "reached": false, "note": "未识别：8.0 s 内没有识别结果（识别节点未在线或算法未回包）"}

@@ -1,0 +1,34 @@
+# ETC 参数热改（协议 §三.(六).4"可自定义识别距离、识别成功率参数"+ 干扰开关）：
+# 只走服务，不改 yaml —— 取证视频里"改前/改后"要能当场来回切。
+# 约定：数值字段填 -1 表示"这一项不改"，字符串字段填空串同理；int8 字段填 -1 表示不改。
+# 回包必须把改后的**全部生效值**读回来（"生效要用效果复核"：不回读当前值的话，
+# 客户端看到的只是"我发过什么"，不是"节点里现在是什么"）。
+# 常量段不另起 ---：rosidl 的 srv 只认**一个** --- 分隔 req/resp，多一个就把常量段
+# 甩成第三段而直接编译失败（pk154 的语法预检就是为这一条装的）。
+uint8 OP_SET=0              # 按字段改（越界直接拒绝并回 message 说明上下界）
+uint8 OP_BASELINE=1         # 回到 etc_zones.yaml 的基线值
+uint8 OP_READ=2             # 只读不改
+uint8 op
+
+float64 identify_distance       # 上界不是拍脑袋：受 lane.y0 卡住，见 yaml 的 distance_max
+float64 success_rate            # 0..1
+int8 interference_enabled       # -1 不改 / 0 关 / 1 开
+float64 interference_failure_rate
+float64 interference_burst_s
+float64 follow_min_gap          # 跟车闯关判定的纵向间距阈值
+float64 hold_open_s             # 抬杆后最少保持多久（地感失效时的兜底）
+string fee_by_class             # "1:5.00,2:10.00,3:15.00"；空串=不改
+---
+bool success
+string message
+string params_text              # 人读表：一行一项，含上下界与是否偏离基线，直接进视频
+float64 identify_distance
+float64 distance_min            # 回带上下界，面板才知道滑杆该画到哪儿
+float64 distance_max
+float64 success_rate
+bool interference_enabled
+float64 interference_failure_rate
+float64 interference_burst_s
+float64 follow_min_gap
+float64 hold_open_s
+string fee_by_class

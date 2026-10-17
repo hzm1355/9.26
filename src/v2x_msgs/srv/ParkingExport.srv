@@ -1,0 +1,13 @@
+# 记录导出（协议 §三.(五).5）：把内存里的通行记录与闸机动作日志落成两份 CSV，
+# 回包直接给路径与行数 —— 导出成没成、成了几条，要看得到，不能只回一句 success。
+string prefix               # 输出文件名前缀；空串=用 records.dir 下的默认名
+bool only_new               # true=只导上次导出之后的新增行；false=全量
+---
+bool success
+string message
+string pass_csv             # 通行记录 CSV 绝对路径
+string action_csv           # 闸机动作日志 CSV 绝对路径
+int32 pass_rows
+int32 action_rows
+string pass_jsonl           # 原始追加式 JSONL 路径（CSV 的上游，对账用）
+string action_jsonl

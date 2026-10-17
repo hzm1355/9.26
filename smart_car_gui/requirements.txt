@@ -1,0 +1,4 @@
+PyQt5>=5.15
+websocket-client>=1.6.0
+pyinstaller>=6.0
+PyYAML>=6.0

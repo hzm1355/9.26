@@ -1,0 +1,33 @@
+# ETC 记录查询（协议 §三.(六).5）：数据源是 etc_recorder_node 常驻内存的环形记录
+# （上限 records.max_records_in_memory）。matched 不受 limit 影响，专门用来对账：
+# "回包条数 == JSONL 行数"这类等式要靠它闭合（任务五栽过一次口径没点名）。
+string plate_number         # 子串匹配即可（"55667" 命中 "沪C55667"）；空串=不过滤
+string vehicle_id           # 空串=不过滤
+string obu_id               # 空串=不过滤
+string gate_id              # 空串=不过滤
+string pass_id              # 精确回指某一条；空串=不过滤
+
+uint8 RESULT_ANY=0
+uint8 RESULT_ALLOWED=1
+uint8 RESULT_DENIED=2
+uint8 RESULT_PENDING=3
+uint8 RESULT_FOLLOWED=4     # 跟车闯关那几条
+uint8 result
+
+float64 t0                  # 仿真时间下界，<=0 表示不设
+float64 t1
+int32 limit                 # 返回条数上限；<=0 表示全部
+bool newest_first
+bool include_identify       # true = 同时回带命中车辆/时段内的识别事件流（含失败与干扰）
+---
+bool success
+string message
+int32 matched               # 通行记录命中总数（不受 limit 影响）
+int32 returned
+EtcPass[] passes
+string[] lines              # 一行一条的人读表格行
+int32 stored                # 内存中当前保留的通行记录总数
+int32 identify_matched
+EtcIdentify[] identifies    # include_identify=false 时为空数组
+string[] identify_lines
+int32 identify_stored

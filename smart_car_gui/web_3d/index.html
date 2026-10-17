@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能小车仿真 3D 可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .panel {
+            position: absolute;
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
+        #status-panel {
+            top: 20px;
+            left: 20px;
+            min-width: 250px;
+        }
+        #vehicle-panel {
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        #control-panel {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #4a9eff;
+            border-bottom: 1px solid rgba(100, 150, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        .status-value {
+            color: #4ade80;
+            font-weight: bold;
+        }
+        .vehicle-card {
+            background: rgba(40, 40, 60, 0.8);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #4a9eff;
+        }
+        .vehicle-name {
+            font-weight: bold;
+            color: #4a9eff;
+            margin-bottom: 5px;
+        }
+        .vehicle-data {
+            font-size: 12px;
+            color: #aaa;
+        }
+        button {
+            background: linear-gradient(135deg, #4a9eff, #2563eb);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 158, 255, 0.4);
+        }
+        button.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        button.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: #4a9eff;
+        }
+        .sensor-viz {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        #lidar-canvas {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        <div id="ui-overlay">
+            <div id="status-panel" class="panel">
+                <h2>系统状态</h2>
+                <div class="status-item">
+                    <span>仿真状态:</span>
+                    <span class="status-value" id="sim-status">运行中</span>
+                </div>
+                <div class="status-item">
+                    <span>车辆数:</span>
+                    <span class="status-value" id="vehicle-count">5</span>
+                </div>
+                <div class="status-item">
+                    <span>仿真时间:</span>
+                    <span class="status-value" id="sim-time">0.0s</span>
+                </div>
+                <div class="status-item">
+                    <span>FPS:</span>
+                    <span class="status-value" id="fps">60</span>
+                </div>
+            </div>
+
+            <div id="vehicle-panel" class="panel">
+                <h2>车辆信息</h2>
+                <div id="vehicle-list"></div>
+            </div>
+
+            <div id="control-panel" class="panel">
+                <button class="success" onclick="startSimulation()">启动仿真</button>
+                <button class="danger" onclick="stopSimulation()">停止仿真</button>
+                <button onclick="resetCamera()">重置视角</button>
+                <button onclick="toggleTopView()">俯视图</button>
+            </div>
+
+            <div class="sensor-viz panel">
+                <h2>激光雷达 (smart_car_1)</h2>
+                <canvas id="lidar-canvas"></canvas>
+            </div>
+        </div>
+        <div id="loading">加载 3D 场景...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // ── 全局变量 ──────────────────────────────────────────
+        let scene, camera, renderer, controls;
+        let vehicles = {};
+        let ground, obstacles = [];
+        let clock = new THREE.Clock();
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // ── 初始化 Three.js ────────────────────────────────────
+        function init() {
+            const canvas = document.getElementById('canvas');
+            
+            // 场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            scene.fog = new THREE.Fog(0x1a1a2e, 50, 200);
+
+            // 相机
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(30, 30, 30);
+            camera.lookAt(0, 0, 0);
+
+            // 渲染器
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // 控制器
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            // 光照
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // 地面
+            createGround();
+            
+            // 竞技场边界
+            createArenaBoundary();
+            
+            // 障碍物
+            createObstacles();
+            
+            // 车辆
+            createVehicles();
+
+            // 网格
+            const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // 坐标轴
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            // 窗口调整
+            window.addEventListener('resize', onWindowResize);
+
+            // 隐藏加载提示
+            document.getElementById('loading').style.display = 'none';
+
+            // 开始动画
+            animate();
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2a5a2a,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        function createArenaBoundary() {
+            const boundaryGeometry = new THREE.BoxGeometry(50, 1, 0.2);
+            const boundaryMaterial = new THREE.MeshStandardMaterial({
+                color: 0x666666,
+                roughness: 0.5
+            });
+
+            // 四面墙
+            const walls = [
+                { pos: [0, 0.5, -25], rot: [0, 0, 0] },
+                { pos: [0, 0.5, 25], rot: [0, 0, 0] },
+                { pos: [-25, 0.5, 0], rot: [0, Math.PI / 2, 0] },
+                { pos: [25, 0.5, 0], rot: [0, Math.PI / 2, 0] }
+            ];
+
+            walls.forEach(w => {
+                const wall = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+                wall.position.set(...w.pos);
+                wall.rotation.set(...w.rot);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                scene.add(wall);
+            });
+        }
+
+        function createObstacles() {
+            // 中央方块
+            const boxGeometry = new THREE.BoxGeometry(2, 0.8, 2);
+            const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const box = new THREE.Mesh(boxGeometry, boxMaterial);
+            box.position.set(0, 0.4, 0);
+            box.castShadow = true;
+            box.receiveShadow = true;
+            scene.add(box);
+            obstacles.push(box);
+
+            // 圆柱体障碍物
+            const cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 16);
+            const cylinderMaterial = new THREE.MeshStandardMaterial({ color: 0xff6347 });
+            const positions = [[5, 5], [-5, 5], [5, -5], [-5, -5]];
+            positions.forEach(pos => {
+                const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+                cylinder.position.set(pos[0], 0.5, pos[1]);
+                cylinder.castShadow = true;
+                cylinder.receiveShadow = true;
+                scene.add(cylinder);
+                obstacles.push(cylinder);
+            });
+        }
+
+        function createVehicles() {
+            const vehicleData = [
+                { name: 'smart_car_1', color: 0x00ff88, pos: [0, -18] },
+                { name: 'smart_car_2', color: 0x6495ed, pos: [-15, -18] },
+                { name: 'smart_car_3', color: 0xffb84d, pos: [15, -18] },
+                { name: 'tb3_1', color: 0xc864ff, pos: [-8, -18] },
+                { name: 'tb3_2', color: 0xff6496, pos: [8, -18] }
+            ];
+
+            vehicleData.forEach(data => {
+                const vehicle = createVehicleModel(data.color);
+                vehicle.position.set(data.pos[0], 0.15, data.pos[1]);
+                vehicle.userData = { name: data.name };
+                scene.add(vehicle);
+                vehicles[data.name] = vehicle;
+            });
+        }
+
+        function createVehicleModel(color) {
+            const group = new THREE.Group();
+
+            // 底盘
+            const chassisGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.5);
+            const chassisMaterial = new THREE.MeshStandardMaterial({ color });
+            const chassis = new THREE.Mesh(chassisGeometry, chassisMaterial);
+            chassis.position.y = 0.1;
+            chassis.castShadow = true;
+            group.add(chassis);
+
+            // 驾驶舱
+            const cabinGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.4);
+            const cabinMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+            cabin.position.set(0, 0.275, 0);
+            cabin.castShadow = true;
+            group.add(cabin);
+
+            // 轮子
+            const wheelGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.05, 16);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const wheelPositions = [
+                [-0.3, 0.1, 0.25],
+                [0.3, 0.1, 0.25],
+                [-0.3, 0.1, -0.25],
+                [0.3, 0.1, -0.25]
+            ];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(...pos);
+                wheel.rotation.z = Math.PI / 2;
+                group.add(wheel);
+            });
+
+            // 激光雷达
+            const lidarGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16);
+            const lidarMaterial = new THREE.MeshStandardMaterial({ color: 0x00ffff });
+            const lidar = new THREE.Mesh(lidarGeometry, lidarMaterial);
+            lidar.position.set(0, 0.35, 0);
+            group.add(lidar);
+
+            return group;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            controls.update();
+
+            // 更新 FPS
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                document.getElementById('fps').textContent = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            // 模拟车辆运动
+            updateVehicleSimulation(delta);
+
+            // 更新 UI
+            updateUI();
+
+            // 更新激光雷达可视化
+            updateLidarVisualization();
+
+            renderer.render(scene, camera);
+        }
+
+        function updateVehicleSimulation(delta) {
+            const time = clock.getElapsedTime();
+            Object.values(vehicles).forEach((vehicle, idx) => {
+                const speed = 0.5 + idx * 0.1;
+                const radius = 8 + idx * 2;
+                vehicle.position.x = Math.cos(time * speed + idx) * radius;
+                vehicle.position.z = Math.sin(time * speed + idx) * radius - 10;
+                vehicle.rotation.y = -time * speed - idx + Math.PI / 2;
+            });
+        }
+
+        function updateUI() {
+            const time = clock.getElapsedTime();
+            document.getElementById('sim-time').textContent = time.toFixed(1) + 's';
+
+            const vehicleList = document.getElementById('vehicle-list');
+            vehicleList.innerHTML = '';
+            Object.entries(vehicles).forEach(([name, vehicle]) => {
+                const card = document.createElement('div');
+                card.className = 'vehicle-card';
+                card.innerHTML = `
+                    <div class="vehicle-name">${name}</div>
+                    <div class="vehicle-data">
+                        X: ${vehicle.position.x.toFixed(2)}m<br>
+                        Y: ${vehicle.position.z.toFixed(2)}m<br>
+                        Yaw: ${(vehicle.rotation.y * 180 / Math.PI).toFixed(1)}°
+                    </div>
+                `;
+                vehicleList.appendChild(card);
+            });
+        }
+
+        function updateLidarVisualization() {
+            const canvas = document.getElementById('lidar-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.offsetWidth;
+            const height = canvas.height = canvas.offsetHeight;
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.min(width, height) / 2 - 10;
+
+            // 绘制激光雷达扫描线
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 36; i++) {
+                const angle = (i / 36) * Math.PI * 2;
+                const distance = maxRadius * (0.5 + 0.5 * Math.sin(Date.now() * 0.001 + i));
+                const x = centerX + Math.cos(angle) * distance;
+                const y = centerY + Math.sin(angle) * distance;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            // 中心点
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ── 控制函数 ──────────────────────────────────────────
+        function startSimulation() {
+            document.getElementById('sim-status').textContent = '运行中';
+            document.getElementById('sim-status').style.color = '#4ade80';
+        }
+
+        function stopSimulation() {
+            document.getElementById('sim-status').textContent = '已停止';
+            document.getElementById('sim-status').style.color = '#ef4444';
+        }
+
+        function resetCamera() {
+            camera.position.set(30, 30, 30);
+            camera.lookAt(0, 0, 0);
+            controls.reset();
+        }
+
+        function toggleTopView() {
+            camera.position.set(0, 50, 0);
+            camera.lookAt(0, 0, 0);
+        }
+
+        // ── WebSocket 连接 ────────────────────────────────────
+        let ws;
+        function connectWebSocket() {
+            const wsPort = window.location.port ? parseInt(window.location.port) + 1 : 8081;
+            ws = new WebSocket(`ws://${window.location.hostname}:${wsPort}`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket 已连接');
+                document.getElementById('sim-status').textContent = '已连接';
+                document.getElementById('sim-status').style.color = '#4ade80';
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'state') {
+                    updateFromServer(data);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket 错误:', error);
+                document.getElementById('sim-status').textContent = '连接错误';
+                document.getElementById('sim-status').style.color = '#ef4444';
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket 断开，尝试重连...');
+                document.getElementById('sim-status').textContent = '断开';
+                document.getElementById('sim-status').style.color = '#ef4444';
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function updateFromServer(data) {
+            // 更新车辆位置
+            if (data.vehicles) {
+                Object.entries(data.vehicles).forEach(([name, v]) => {
+                    if (vehicles[name]) {
+                        vehicles[name].position.x = v.x;
+                        vehicles[name].position.z = v.y;
+                        vehicles[name].rotation.y = v.yaw;
+                    }
+                });
+            }
+            document.getElementById('sim-time').textContent = (data.sim_time || 0).toFixed(1) + 's';
+        }
+
+        // ── 启动 ──────────────────────────────────────────────
+        init();
+        connectWebSocket();
+    </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>smart_car_sim</name>
+  <version>1.0.0</version>
+  <description>ROS2 智能小车算法仿真模块（独立功能包）
+
+    对应需求（一）全部 6 项子功能：
+      1. 多车型可配置（尺寸/轮距/最高速度/加速度）
+      2. 虚拟传感器仿真（LiDAR/Camera/IMU/Odom），标准 ROS2 话题，兼容 Nav2
+      3. Nav2 导航算法验证（A*/Dijkstra/航点巡航/多车协调/避障）
+      4. 支持导入自定义 ROS2 包到 Gazebo
+      5. 速度/加速度/优先级可配；多车同时运行；轨迹/速度记录；场景回放
+      6. 插件化故障模拟（传感器失效/数据延迟/位姿漂移）
+  </description>
+  <maintainer email="user@example.com">developer</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- C++ 插件依赖 -->
+  <build_depend>gazebo_dev</build_depend>
+  <build_depend>gazebo_ros</build_depend>
+  <build_depend>rclcpp</build_depend>
+
+  <!-- Python 节点依赖 -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <!-- 消息类型 -->
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>gazebo_msgs</depend>
+
+  <!-- Gazebo 仿真 -->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>gazebo_ros2_control</exec_depend>
+
+  <!-- Nav2 导航 -->
+  <exec_depend>navigation2</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+
+  <!-- TF / 机器人状态 -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <!-- 共享区域触发底座（功能二~六共用） -->
+  <exec_depend>v2x_demo</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

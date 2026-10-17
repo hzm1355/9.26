@@ -1,0 +1,19 @@
+# 闸机手动控制与故障注入（协议 §三.(五).4）：既支持话题（parking_zones.yaml 的
+# manual_cmd_topic / fault_topic，形如 "gate_in:1.5708"、"gate_out:STUCK"），
+# 也支持本服务 —— 服务能拿到回包，取证时不用靠"看日志猜有没有生效"。
+uint8 OP_LIST=0             # 查询全部闸机当前状态
+uint8 OP_RAISE=1            # 强制抬杆（无视核验结果，source 记为 MANUAL）
+uint8 OP_LOWER=2            # 强制落杆（杆下仍被占用时会被防砸逻辑挡回，见 reached=false）
+uint8 OP_AUTO=3             # 交还自动控制，撤销手动占权
+uint8 OP_FAULT=4            # 注入故障，取 fault_kind
+uint8 OP_CLEAR_FAULT=5      # 清除故障并恢复自动
+uint8 op
+
+string gate_id              # gate_in / gate_out；空串=对两道都作用（OP_LIST 时忽略）
+float64 angle_rad           # OP_RAISE 时可指定目标角；-999 表示用 YAML 的 open_angle
+uint8 fault_kind            # 取 BarrierState 的 FAULT_STUCK/RAISE_FAIL/NO_CLOSE/SENSOR_FAIL
+---
+bool success
+string message
+BarrierState[] states       # 变更后各闸机的结构化状态（OP_LIST 也走这条）
+string[] lines              # 与 states 一一对应的人读行，界面直接打印
